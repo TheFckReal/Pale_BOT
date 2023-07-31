@@ -52,6 +52,7 @@ namespace Zone34_BOT
             {
                 var slashCmd = new SlashCommands(client: _client);
                 var modalCmd = new Modals(_client);
+                var selectCmd = new SelectMenus(_client);
             });
         }
 

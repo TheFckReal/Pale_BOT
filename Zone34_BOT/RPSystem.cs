@@ -4,10 +4,13 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using NLog;
+using NLog.Fluent;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
@@ -19,6 +22,7 @@ using ZstdSharp;
 using static Zone34_BOT.RPSystem;
 using static Zone34_BOT.RPSystem.User;
 using static Zone34_BOT.RPSystem.User.Person;
+using static Zone34_BOT.RPSystem.User.Person.Skills;
 
 namespace Zone34_BOT
 {
@@ -60,23 +64,89 @@ namespace Zone34_BOT
                 public string Name { get; set; } = "";
                 public int Mental { get; set; }
                 public int Health { get; set; }
+                public int FreePoints { get; set; } = 8;
                 public Skills SkillSet { get; set; } = new Skills();
                 public class Skills
                 {
                     #region Perks Propeties
-                    public IntellectType Intellect { get; set; } = new IntellectType();
-                    public PsycheType Psyche { get; set; } = new PsycheType();
-                    public PhysiqueType Physique { get; set; } = new PhysiqueType();
-                    public MotoricsType Motorics { get; set; } = new MotoricsType();
+                    public IntellectSkill Intellect { get; set; } = new IntellectSkill();
+                    public PsycheSkill Psyche { get; set; } = new PsycheSkill();
+                    public PhysiqueSkill Physique { get; set; } = new PhysiqueSkill();
+                    public MotoricsSkill Motorics { get; set; } = new MotoricsSkill();
                     #endregion
-                    public interface IPerkSystem { public string TranslatedName { get; } public static Dictionary<string, string> StatDescription { get; } = null!; public Dictionary<string, string> GetStatDescription() => StatDescription; }
+                    public interface ISkill
+                    {
+                        public string TranslatedName { get; }
+                        public static Dictionary<string, string> StatDescription { get; } = null!;
+                        public Dictionary<string, string> GetStatDescription() => StatDescription;
+                        public List<Perk> PerkList { get; }
+                        public int MaxPoints { get; set; }
+                    }
                     public abstract record Perk
                     {
                         public int points = 1;
                         public bool isSpeciality;
                         public virtual string GetTranslatedName() => "Base perk name";
                     }
-                    public class IntellectType : IPerkSystem
+                    class SkillEnumerator : IEnumerator<Perk>
+                    {
+                        Perk[] perks;
+
+                        int position = -1;
+
+                        public SkillEnumerator(Perk[] perks)
+                        {
+                            this.perks = perks;
+                        }
+
+                        public Perk Current
+                        {
+                            get
+                            {
+                                if (position == -1 || position >= perks.Length)
+                                    throw new ArgumentOutOfRangeException();
+                                return perks[position];
+                            }
+                        }
+
+                        Perk IEnumerator<Perk>.Current => Current;
+
+                        object IEnumerator.Current => throw new NotImplementedException();
+
+                        public void Dispose()
+                        {
+
+                        }
+
+                        public bool MoveNext()
+                        {
+                            if (position < perks.Length - 1)
+                            {
+                                position++;
+                                return true;
+                            }
+                            else
+                                return false;
+                        }
+
+                        public void Reset() => position = -1;
+
+                        void IDisposable.Dispose()
+                        {
+
+                        }
+
+                        bool IEnumerator.MoveNext()
+                        {
+                            return MoveNext();
+                        }
+
+                        void IEnumerator.Reset()
+                        {
+                            Reset();
+                        }
+                    }
+                    public class IntellectSkill : ISkill
                     {
                         #region non-serilizable-intelligence
                         [BsonIgnore]
@@ -92,6 +162,8 @@ namespace Zone34_BOT
                         public Dictionary<string, string> GetStatDescription() => StatDescription;
                         [BsonIgnore]
                         public string TranslatedName => "Интеллект";
+                        [BsonIgnore]
+                        public List<Perk> PerkList => new List<Perk> { Logic, Encyclopedia, Rhetoric, Drama, Сonceptualization, VisualCalculus };
                         #endregion
                         public LogicType Logic { get; set; } = new();
                         public EncyclopediaType Encyclopedia { get; set; } = new();
@@ -145,7 +217,7 @@ namespace Zone34_BOT
                         #endregion
                         public int MaxPoints { get; set; } = 6;
                     }
-                    public class PsycheType : IPerkSystem
+                    public class PsycheSkill : ISkill
                     {
                         #region non-serilizable-mentality
                         [BsonIgnore]
@@ -161,6 +233,8 @@ namespace Zone34_BOT
                         public Dictionary<string, string> GetStatDescription() => StatDescription;
                         [BsonIgnore]
                         public string TranslatedName => "Психика";
+                        [BsonIgnore]
+                        public List<Perk> PerkList => new List<Perk> { Willpower, InlandEmpire, Empathy, Authority, PoliceWave, Suggestion };
                         #endregion
                         public WillpowerType Willpower { get; set; } = new();
                         public InlandEmpireType InlandEmpire { get; set; } = new();
@@ -214,7 +288,7 @@ namespace Zone34_BOT
                         #endregion
                         public int MaxPoints { get; set; } = 6;
                     }
-                    public class PhysiqueType : IPerkSystem
+                    public class PhysiqueSkill : ISkill
                     {
                         #region non-serilizable-physic
                         [BsonIgnore]
@@ -230,6 +304,8 @@ namespace Zone34_BOT
                         public Dictionary<string, string> GetStatDescription() => StatDescription;
                         [BsonIgnore]
                         public string TranslatedName => "Физика";
+                        [BsonIgnore]
+                        public List<Perk> PerkList => new List<Perk> { Endurance, PainThreshold, PhysicalInstrument, ElectroChemistry, Shivers, HalfLight };
                         #endregion
                         public EnduranceType Endurance { get; set; } = new();
                         public PainThresholdType PainThreshold { get; set; } = new();
@@ -282,9 +358,8 @@ namespace Zone34_BOT
                         }
                         #endregion
                         public int MaxPoints { get; set; } = 6;
-
                     }
-                    public class MotoricsType : IPerkSystem
+                    public class MotoricsSkill : ISkill
                     {
                         #region non-serilizable-motility
                         [BsonIgnore]
@@ -300,6 +375,8 @@ namespace Zone34_BOT
                         public Dictionary<string, string> GetStatDescription() => StatDescription;
                         [BsonIgnore]
                         public string TranslatedName => "Моторика";
+                        [BsonIgnore]
+                        public List<Perk> PerkList => new List<Perk> { Coordination, Perception, ReactionSpeed, SavoirFaire, Interfacing, Composure };
                         #endregion
                         public CoordinationType Coordination { get; set; } = new();
                         public PerceptionType Perception { get; set; } = new();
@@ -380,23 +457,23 @@ namespace Zone34_BOT
                     {
                         if (choosenPerkId == (long)PerksId.Intelligence)
                         {
-                            embedMsg = CreateEmbedMessage(new Skills.IntellectType());
+                            embedMsg = CreateEmbedMessage(new Skills.IntellectSkill());
                         }
                         else if (choosenPerkId == (long)PerksId.Mentality)
                         {
-                            embedMsg = CreateEmbedMessage(new Skills.PsycheType());
+                            embedMsg = CreateEmbedMessage(new Skills.PsycheSkill());
                         }
                         else if (choosenPerkId == (long)PerksId.Physic)
                         {
-                            embedMsg = CreateEmbedMessage(new Skills.PhysiqueType());
+                            embedMsg = CreateEmbedMessage(new Skills.PhysiqueSkill());
                         }
                         else if (choosenPerkId == (long)PerksId.Motility)
                         {
-                            embedMsg = CreateEmbedMessage(new Skills.MotoricsType());
+                            embedMsg = CreateEmbedMessage(new Skills.MotoricsSkill());
                         }
                         else
                         {
-                            embedMsg = CreateEmbedMessage(new Skills.IPerkSystem[] { new Skills.IntellectType(), new Skills.PsycheType(), new Skills.PhysiqueType(), new Skills.MotoricsType() });
+                            embedMsg = CreateEmbedMessage(new Skills.ISkill[] { new Skills.IntellectSkill(), new Skills.PsycheSkill(), new Skills.PhysiqueSkill(), new Skills.MotoricsSkill() });
                         }
                     }
 
@@ -409,11 +486,11 @@ namespace Zone34_BOT
                     await command.ModifyOriginalResponseAsync(x => x.Content = "Error with creating respond");
             }
 
-            Embed[] CreateEmbedMessage(Skills.IPerkSystem perkSystem)
+            Embed[] CreateEmbedMessage(Skills.ISkill perkSystem)
             {
-                return CreateEmbedMessage(new Skills.IPerkSystem[] { perkSystem });
+                return CreateEmbedMessage(new Skills.ISkill[] { perkSystem });
             }
-            Embed[] CreateEmbedMessage(Skills.IPerkSystem[] perkSystem)
+            Embed[] CreateEmbedMessage(Skills.ISkill[] perkSystem)
             {
                 Embed[] embeds = new Embed[perkSystem.Length];
                 try
@@ -461,8 +538,6 @@ namespace Zone34_BOT
             {
                 try
                 {
-
-                    var db = Program.BotDB;
                     var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
                     User? user;
                     if ((user = _cache.Get<User?>(command.User.Id)) == null)
@@ -505,7 +580,7 @@ namespace Zone34_BOT
             {
                 ModalBuilder modalBuilder = new ModalBuilder();
                 modalBuilder.WithTitle("Создание персонажа");
-                modalBuilder.WithCustomId(ModalTypes.Creation.ToString());
+                modalBuilder.WithCustomId(ModalIds.Creation.ToString());
                 modalBuilder.AddTextInput("Введите имя персонажа", "name", TextInputStyle.Short, maxLength: 64, minLength: 1, required: true);
                 modalBuilder.AddTextInput("Введите название коронного навыка", "crown", TextInputStyle.Short, "грубаясила", required: true);
                 TextInputBuilder txtInputSkillsBuilder = new() { CustomId = "skills", Label = "Распределите 8 очков навыков персонажа", Required = true, Placeholder = "Формат: [навык слитно на русском]:[значение] через пробел.\nНапример,\nэквалибристика:4 моторика:2", Style = TextInputStyle.Paragraph };
@@ -539,25 +614,27 @@ namespace Zone34_BOT
                         else if (component.CustomId == "crown")
                         {
                             string inputedPerk = component.Value ?? throw new ArgumentNullException();
-                            inputedPerk = inputedPerk.ToLower();
-                            Type skillType = GetSkillOfPerkByNameRus(inputedPerk, newPerson, true) ?? throw new ArgumentNullException("Введеный перк не был найден");
-                            if (skillType.Name == nameof(Skills.IntellectType))
+                            inputedPerk = inputedPerk.ToLower().Replace(" ", "");
+                            //Type skillType = GetSkillOfPerkByNameRus(inputedPerk, newPerson, true) ?? throw new ArgumentNullException("Введеный перк не был найден");
+                            Type skillType = GetSkillOfPerkByNameRus(inputedPerk, new ISkill[] { newPerson.SkillSet.Intellect, newPerson.SkillSet.Psyche, newPerson.SkillSet.Physique, newPerson.SkillSet.Motorics }, true) ?? throw new ArgumentNullException("Введеный перк не был найден");
+                            if (skillType.Name == nameof(Skills.IntellectSkill))
                             {
                                 newPerson.SkillSet.Intellect.MaxPoints += 1;
                             }
-                            else if (skillType.Name == nameof(Skills.PsycheType))
+                            else if (skillType.Name == nameof(Skills.PsycheSkill))
                             {
                                 newPerson.SkillSet.Psyche.MaxPoints += 1;
                             }
-                            else if (skillType.Name == nameof(Skills.PhysiqueType))
+                            else if (skillType.Name == nameof(Skills.PhysiqueSkill))
                             {
                                 newPerson.SkillSet.Physique.MaxPoints += 1;
                             }
-                            else if (skillType.Name == nameof(Skills.MotoricsType))
+                            else if (skillType.Name == nameof(Skills.MotoricsSkill))
                             {
                                 newPerson.SkillSet.Motorics.MaxPoints += 1;
                             }
-                            AddPointsToPerkByNameRus(inputedPerk, newPerson, 1);
+                            //AddPointsToPerkByNameRus(inputedPerk, newPerson, 1);
+                            AddPointsToPerkByNameRus(inputedPerk, new ISkill[] { newPerson.SkillSet.Intellect, newPerson.SkillSet.Psyche, newPerson.SkillSet.Physique, newPerson.SkillSet.Motorics }, 1);
                         }
                         else if (component.CustomId == "skills")
                         {
@@ -647,98 +724,123 @@ namespace Zone34_BOT
                 {
                     int value = Convert.ToInt32(perksValue.Value);
                     count += value;
-                    AddPointsToPerkByNameRus(perksValue.Key, person, value);
+                    //AddPointsToPerkByNameRus(perksValue.Key, person, value);
+                    AddPointsToPerkByNameRus(perksValue.Key, new ISkill[] { person.SkillSet.Intellect, person.SkillSet.Psyche, person.SkillSet.Physique, person.SkillSet.Motorics }, value);
                 }
-                if (count > 8)
+                if (count > person.FreePoints)
                 {
-                    throw new CreatingCharacterException("Количество очков не может быть более 8");
-                }
+                    throw new CreatingCharacterException($"Количество очков, затрачиваемых на прокачку персонажа, не может превышать {person.FreePoints}");
+                } else
+                    person.FreePoints -= count;
             }
 
-            private void AddPointsToPerkByNameRus(string perkNameRus, Person person, int count)
+            //private void AddPointsToPerkByNameRus(string perkNameRus, Person person, int count)
+            //{
+            //    OverflowException overflowException = new OverflowException("PointsOverflow");
+            //    Skills perksInstance = person.SkillSet;
+            //    string? methodName = nameof(Skills.Perk.GetTranslatedName);
+            //    Type IntType = typeof(Skills.IntellectSkill);
+            //    foreach (PropertyInfo propertyInfo in IntType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            //    {
+            //        Type perkType = propertyInfo.PropertyType;
+            //        MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            //        if (methodGetTranslatedName == null) continue;
+            //        methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Intellect), null);
+            //        string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Intellect), null) as string)?.ToLower().Replace(" ", "");
+            //        if (string.IsNullOrEmpty(translatedName))
+            //            continue;
+            //        if (perkNameRus == translatedName)
+            //        {
+            //            Skills.Perk? perk = propertyInfo.GetValue(perksInstance.Intellect) as Skills.Perk;
+            //            if (perk is null) throw new ArgumentNullException("perk cannot be null");
+            //            perk.points += count;
+            //            if (perk.points > perksInstance.Intellect.MaxPoints)
+            //                throw overflowException;
+            //            return;
+            //        }
+            //    }
+            //    Type PsychType = typeof(Skills.PsycheSkill);
+            //    foreach (PropertyInfo propertyInfo in PsychType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            //    {
+            //        Type perkType = propertyInfo.PropertyType;
+            //        MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            //        if (methodGetTranslatedName == null) continue;
+            //        methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Psyche), null);
+            //        string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Psyche), null) as string)?.ToLower().Replace(" ", "");
+            //        if (string.IsNullOrEmpty(translatedName))
+            //            continue;
+            //        if (perkNameRus == translatedName)
+            //        {
+            //            Skills.Perk? perk = propertyInfo.GetValue(perksInstance.Psyche) as Skills.Perk;
+            //            if (perk is null) throw new ArgumentNullException("perk cannot be null");
+            //            perk.points += count;
+            //            if (perk.points > perksInstance.Psyche.MaxPoints)
+            //                throw overflowException;
+            //            return;
+            //        }
+            //    }
+            //    Type PhysType = typeof(Skills.PhysiqueSkill);
+            //    foreach (PropertyInfo propertyInfo in PhysType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            //    {
+            //        Type perkType = propertyInfo.PropertyType;
+            //        MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            //        if (methodGetTranslatedName == null) continue;
+            //        methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Physique), null);
+            //        string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Physique), null) as string)?.ToLower().Replace(" ", "");
+            //        if (string.IsNullOrEmpty(translatedName))
+            //            continue;
+            //        if (perkNameRus == translatedName)
+            //        {
+            //            Skills.Perk? perk = propertyInfo.GetValue(perksInstance.Physique) as Skills.Perk;
+            //            if (perk is null) throw new ArgumentNullException("perk cannot be null");
+            //            perk.points += count;
+            //            if (perk.points > perksInstance.Physique.MaxPoints)
+            //                throw overflowException;
+            //            return;
+            //        }
+            //    }
+            //    Type MotType = typeof(Skills.MotoricsSkill);
+            //    foreach (PropertyInfo propertyInfo in MotType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            //    {
+            //        Type perkType = propertyInfo.PropertyType;
+            //        MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            //        if (methodGetTranslatedName == null) continue;
+            //        methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Motorics), null);
+            //        string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Motorics), null) as string)?.ToLower().Replace(" ", "");
+            //        if (string.IsNullOrEmpty(translatedName))
+            //            continue;
+            //        if (perkNameRus == translatedName)
+            //        {
+            //            Skills.Perk? perk = propertyInfo.GetValue(perksInstance.Motorics) as Skills.Perk;
+            //            if (perk is null) throw new ArgumentNullException("perk cannot be null");
+            //            perk.points += count;
+            //            if (perk.points > perksInstance.Motorics.MaxPoints)
+            //                throw overflowException;
+            //            return;
+            //        }
+            //    }
+            //}
+
+            private void AddPointsToPerkByNameRus(string perkNameRus, Skills.ISkill[] skillArray, int value)
             {
-                OverflowException overflowException = new OverflowException("PointsOverflow");
-                Skills perksInstance = person.SkillSet;
-                string? methodName = nameof(Skills.Perk.GetTranslatedName);
-                Type IntType = typeof(Skills.IntellectType);
-                foreach (PropertyInfo propertyInfo in IntType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                bool isPerkFounded = false;
+                foreach (Skills.ISkill skill in skillArray)
                 {
-                    Type perkType = propertyInfo.PropertyType;
-                    MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
-                    if (methodGetTranslatedName == null) continue;
-                    methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Intellect), null);
-                    string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Intellect), null) as string)?.ToLower().Replace(" ", "");
-                    if (string.IsNullOrEmpty(translatedName))
-                        continue;
-                    if (perkNameRus == translatedName)
+                    foreach (Skills.Perk perk in skill.PerkList)
                     {
-                        Skills.Perk? perk = propertyInfo.GetValue(perksInstance.Intellect) as Skills.Perk;
-                        if (perk is null) throw new ArgumentNullException("perk cannot be null");
-                        perk.points += count;
-                        if (perk.points > perksInstance.Intellect.MaxPoints)
-                            throw overflowException;
-                        return;
+                        if (perkNameRus == perk.GetTranslatedName().ToLower().Replace(" ", ""))
+                        {
+                            isPerkFounded = true;
+                            perk.points += value;
+                            if (perk.points > skill.MaxPoints)
+                                throw new OverflowException("PointsOverflow");
+                            return;
+                        }
                     }
                 }
-                Type PsychType = typeof(Skills.PsycheType);
-                foreach (PropertyInfo propertyInfo in PsychType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                if (isPerkFounded == false)
                 {
-                    Type perkType = propertyInfo.PropertyType;
-                    MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
-                    if (methodGetTranslatedName == null) continue;
-                    methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Psyche), null);
-                    string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Psyche), null) as string)?.ToLower().Replace(" ", "");
-                    if (string.IsNullOrEmpty(translatedName))
-                        continue;
-                    if (perkNameRus == translatedName)
-                    {
-                        Skills.Perk? perk = propertyInfo.GetValue(perksInstance.Psyche) as Skills.Perk;
-                        if (perk is null) throw new ArgumentNullException("perk cannot be null");
-                        perk.points += count;
-                        if (perk.points > perksInstance.Psyche.MaxPoints)
-                            throw overflowException;
-                        return;
-                    }
-                }
-                Type PhysType = typeof(Skills.PhysiqueType);
-                foreach (PropertyInfo propertyInfo in PhysType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
-                {
-                    Type perkType = propertyInfo.PropertyType;
-                    MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
-                    if (methodGetTranslatedName == null) continue;
-                    methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Physique), null);
-                    string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Physique), null) as string)?.ToLower().Replace(" ", "");
-                    if (string.IsNullOrEmpty(translatedName))
-                        continue;
-                    if (perkNameRus == translatedName)
-                    {
-                        Skills.Perk? perk = propertyInfo.GetValue(perksInstance.Physique) as Skills.Perk;
-                        if (perk is null) throw new ArgumentNullException("perk cannot be null");
-                        perk.points += count;
-                        if (perk.points > perksInstance.Physique.MaxPoints)
-                            throw overflowException;
-                        return;
-                    }
-                }
-                Type MotType = typeof(Skills.MotoricsType);
-                foreach (PropertyInfo propertyInfo in MotType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
-                {
-                    Type perkType = propertyInfo.PropertyType;
-                    MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
-                    if (methodGetTranslatedName == null) continue;
-                    methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Motorics), null);
-                    string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Motorics), null) as string)?.ToLower().Replace(" ", "");
-                    if (string.IsNullOrEmpty(translatedName))
-                        continue;
-                    if (perkNameRus == translatedName)
-                    {
-                        Skills.Perk? perk = propertyInfo.GetValue(perksInstance.Motorics) as Skills.Perk;
-                        if (perk is null) throw new ArgumentNullException("perk cannot be null");
-                        perk.points += count;
-                        if (perk.points > perksInstance.Motorics.MaxPoints)
-                            throw overflowException;
-                        return;
-                    }
+                    throw new CreatingCharacterException("Необходимо внести корректные данные при выборе навыка");
                 }
             }
 
@@ -749,89 +851,108 @@ namespace Zone34_BOT
             /// <param name="person">Character where need to find</param>
             /// <param name="makeToCrowned">Need to make perk "crow"</param>
             /// <returns></returns>
-            private Type? GetSkillOfPerkByNameRus(string perkNameRus, Person person, bool makeToCrowned = false)
+            //private Type? GetSkillOfPerkByNameRus(string perkNameRus, Person person, bool makeToCrowned = false)
+            //{
+            //    OverflowException overflowException = new OverflowException("PointsOverflow");
+            //    Skills perksInstance = person.SkillSet;
+            //    string? methodName = nameof(Skills.Perk.GetTranslatedName);
+            //    Type IntType = typeof(Skills.IntellectSkill);
+            //    foreach (PropertyInfo propertyInfo in IntType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            //    {
+            //        Type perkType = propertyInfo.PropertyType;
+            //        MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            //        if (methodGetTranslatedName == null) continue;
+            //        methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Intellect), null);
+            //        string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Intellect), null) as string)?.ToLower().Replace(" ", "");
+            //        if (string.IsNullOrEmpty(translatedName))
+            //            continue;
+            //        if (perkNameRus == translatedName)
+            //        {
+            //            if (makeToCrowned)
+            //            {
+            //                var isSpecialityField = perkType?.GetField(nameof(Skills.Perk.isSpeciality));
+            //                isSpecialityField?.SetValue(propertyInfo.GetValue(perksInstance.Intellect), true);
+            //            }
+            //            return IntType;
+            //        }
+            //    }
+            //    Type PsychType = typeof(Skills.PsycheSkill);
+            //    foreach (PropertyInfo propertyInfo in PsychType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            //    {
+            //        Type perkType = propertyInfo.PropertyType;
+            //        MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            //        if (methodGetTranslatedName == null) continue;
+            //        methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Psyche), null);
+            //        string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Psyche), null) as string)?.ToLower().Replace(" ", "");
+            //        if (string.IsNullOrEmpty(translatedName))
+            //            continue;
+            //        if (perkNameRus == translatedName)
+            //        {
+            //            if (makeToCrowned)
+            //            {
+            //                var isSpecialityField = perkType?.GetField(nameof(Skills.Perk.isSpeciality));
+            //                isSpecialityField?.SetValue(propertyInfo.GetValue(perksInstance.Psyche), true);
+            //            }
+            //            return PsychType;
+            //        }
+            //    }
+            //    Type PhysType = typeof(Skills.PhysiqueSkill);
+            //    foreach (PropertyInfo propertyInfo in PhysType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            //    {
+            //        Type perkType = propertyInfo.PropertyType;
+            //        MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            //        if (methodGetTranslatedName == null) continue;
+            //        methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Physique), null);
+            //        string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Physique), null) as string)?.ToLower().Replace(" ", "");
+            //        if (string.IsNullOrEmpty(translatedName))
+            //            continue;
+            //        if (perkNameRus == translatedName)
+            //        {
+            //            if (makeToCrowned)
+            //            {
+            //                var isSpecialityField = perkType?.GetField(nameof(Skills.Perk.isSpeciality));
+            //                isSpecialityField?.SetValue(propertyInfo.GetValue(perksInstance.Physique), true);
+            //            }
+            //            return PhysType;
+            //        }
+            //    }
+            //    Type MotType = typeof(Skills.MotoricsSkill);
+            //    foreach (PropertyInfo propertyInfo in MotType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            //    {
+            //        Type perkType = propertyInfo.PropertyType;
+            //        MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            //        if (methodGetTranslatedName == null) continue;
+            //        methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Motorics), null);
+            //        string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Motorics), null) as string)?.ToLower().Replace(" ", "");
+            //        if (string.IsNullOrEmpty(translatedName))
+            //            continue;
+            //        if (perkNameRus == translatedName)
+            //        {
+            //            if (makeToCrowned)
+            //            {
+            //                var isSpecialityField = perkType?.GetField(nameof(Skills.Perk.isSpeciality));
+            //                isSpecialityField?.SetValue(propertyInfo.GetValue(perksInstance.Motorics), true);
+            //            }
+            //            return MotType;
+            //        }
+            //    }
+            //    return null;
+            //}
+
+            private Type? GetSkillOfPerkByNameRus(string perkNameRus, Skills.ISkill[] skillArray, bool makeToCrowned = false)
             {
-                OverflowException overflowException = new OverflowException("PointsOverflow");
-                Skills perksInstance = person.SkillSet;
-                string? methodName = nameof(Skills.Perk.GetTranslatedName);
-                Type IntType = typeof(Skills.IntellectType);
-                foreach (PropertyInfo propertyInfo in IntType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                foreach (Skills.ISkill skill in skillArray)
                 {
-                    Type perkType = propertyInfo.PropertyType;
-                    MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
-                    if (methodGetTranslatedName == null) continue;
-                    methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Intellect), null);
-                    string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Intellect), null) as string)?.ToLower().Replace(" ", "");
-                    if (string.IsNullOrEmpty(translatedName))
-                        continue;
-                    if (perkNameRus == translatedName)
+                    foreach (Skills.Perk perk in skill.PerkList)
                     {
-                        if (makeToCrowned)
+                        if (perkNameRus == perk.GetTranslatedName().ToLower().Replace(" ", ""))
                         {
-                            var isSpecialityField = perkType?.GetField(nameof(Skills.Perk.isSpeciality));
-                            isSpecialityField?.SetValue(propertyInfo.GetValue(perksInstance.Intellect), true);
+                            if (makeToCrowned)
+                            {
+                                perk.isSpeciality = true;
+                            }
+                            return skill.GetType();
                         }
-                        return IntType;
-                    }
-                }
-                Type PsychType = typeof(Skills.PsycheType);
-                foreach (PropertyInfo propertyInfo in PsychType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
-                {
-                    Type perkType = propertyInfo.PropertyType;
-                    MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
-                    if (methodGetTranslatedName == null) continue;
-                    methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Psyche), null);
-                    string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Psyche), null) as string)?.ToLower().Replace(" ", "");
-                    if (string.IsNullOrEmpty(translatedName))
-                        continue;
-                    if (perkNameRus == translatedName)
-                    {
-                        if (makeToCrowned)
-                        {
-                            var isSpecialityField = perkType?.GetField(nameof(Skills.Perk.isSpeciality));
-                            isSpecialityField?.SetValue(propertyInfo.GetValue(perksInstance.Psyche), true);
-                        }
-                        return PsychType;
-                    }
-                }
-                Type PhysType = typeof(Skills.PhysiqueType);
-                foreach (PropertyInfo propertyInfo in PhysType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
-                {
-                    Type perkType = propertyInfo.PropertyType;
-                    MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
-                    if (methodGetTranslatedName == null) continue;
-                    methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Physique), null);
-                    string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Physique), null) as string)?.ToLower().Replace(" ", "");
-                    if (string.IsNullOrEmpty(translatedName))
-                        continue;
-                    if (perkNameRus == translatedName)
-                    {
-                        if (makeToCrowned)
-                        {
-                            var isSpecialityField = perkType?.GetField(nameof(Skills.Perk.isSpeciality));
-                            isSpecialityField?.SetValue(propertyInfo.GetValue(perksInstance.Physique), true);
-                        }
-                        return PhysType;
-                    }
-                }
-                Type MotType = typeof(Skills.MotoricsType);
-                foreach (PropertyInfo propertyInfo in MotType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | BindingFlags.DeclaredOnly))
-                {
-                    Type perkType = propertyInfo.PropertyType;
-                    MethodInfo? methodGetTranslatedName = perkType?.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
-                    if (methodGetTranslatedName == null) continue;
-                    methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Motorics), null);
-                    string? translatedName = (methodGetTranslatedName?.Invoke(propertyInfo.GetValue(perksInstance.Motorics), null) as string)?.ToLower().Replace(" ", "");
-                    if (string.IsNullOrEmpty(translatedName))
-                        continue;
-                    if (perkNameRus == translatedName)
-                    {
-                        if (makeToCrowned)
-                        {
-                            var isSpecialityField = perkType?.GetField(nameof(Skills.Perk.isSpeciality));
-                            isSpecialityField?.SetValue(propertyInfo.GetValue(perksInstance.Motorics), true);
-                        }
-                        return MotType;
                     }
                 }
                 return null;
@@ -850,13 +971,13 @@ namespace Zone34_BOT
                 try
                 {
                     SocketGuildUser mentionedUser = (SocketGuildUser)command.Data.Options.First().Value;
-                    
+                    await SendSelectMenuForSelectPerson(command, mentionedUser);
                 }
                 catch (MongoException mongoEx)
                 {
                     await command.RespondAsync("Произошла ошибка при доступе к базе данных. Обратитесь к поддержке");
                 }
-                catch (Exception ex) when (ex is ArgumentNullException || ex is InvalidOperationException )
+                catch (Exception ex) when (ex is ArgumentNullException || ex is InvalidOperationException)
                 {
                     await command.RespondAsync("Не было упомянуто ни одного пользователя");
                     Console.WriteLine(ex.Message);
@@ -868,7 +989,7 @@ namespace Zone34_BOT
                 }
             }
 
-            private async Task SendModalForSelectPerson(SocketSlashCommand command, SocketGuildUser mentionedUser)
+            private async Task SendSelectMenuForSelectPerson(SocketSlashCommand command, SocketGuildUser mentionedUser)
             {
                 User? user = null;
                 if ((user = _cache.Get<User>(mentionedUser.Id)) == null)
@@ -883,21 +1004,129 @@ namespace Zone34_BOT
                 {
                     if (user.Persons.Count > 0)
                     {
-
-                    } else
-                    {
-                        await command.RespondAsync($"У пользователя ${mentionedUser.Nickname} нет персонажей");
+                        await command.RespondAsync($"Персонажи {mentionedUser.Mention}", ephemeral: true, components: new ComponentBuilder().WithSelectMenu(CreatePersonsSelectMenu(user.Persons)).Build());
                     }
-                } else
+                    else
+                    {
+                        await command.RespondAsync($"У пользователя {mentionedUser.DisplayName} нет персонажей", ephemeral: true);
+                    }
+                }
+                else
                 {
-                    await command.RespondAsync($"У пользователя ${mentionedUser.Nickname} нет персонажей");
+                    await command.RespondAsync($"У пользователя {mentionedUser.DisplayName} нет персонажей", ephemeral: true);
                 }
             }
 
-            private Modal CreateModalForPersons(IReadOnlyList<Person> persons, ulong userId)
+            private SelectMenuBuilder CreatePersonsSelectMenu(IReadOnlyList<Person> persons)
             {
+                SelectMenuBuilder builder = new SelectMenuBuilder();
+                builder = builder.WithCustomId(SelectMenuIds.ShowPerson.ToString()).WithMinValues(1).WithMaxValues(1).WithPlaceholder("Выберите персонажа").WithType(ComponentType.SelectMenu);
+                int iter = 0;
+                foreach (var person in persons)
+                {
+                    builder = builder.AddOption(person.Name, (iter++).ToString());
+                }
+                return builder;
+            }
 
-                
+            public async Task ShowingCharacterInfo(SocketMessageComponent component)
+            {
+                try
+                {
+                    var mentionedUser = component.Message.MentionedUsers.First();
+                    User? user = null;
+                    var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
+                    if ((user = _cache.Get<User>(mentionedUser.Id)) == null)
+                    {
+                        using (var cursor = await userCollection.FindAsync<User>(x => x.UserId == mentionedUser.Id))
+                        {
+                            user = cursor.FirstOrDefault();
+                        }
+                    }
+                    if (user != null)
+                    {
+                        int numInList = Convert.ToInt32(component.Data.Values.First());
+                        Embed answer = CreateAnswerEmbed(user.Persons[numInList]);
+                        await component.RespondAsync(embed: answer, ephemeral: true);
+                    }
+                    else
+                    {
+                        await component.RespondAsync("Пользователь не был найден", ephemeral: true);
+                    }
+                }
+                catch (MongoException mongoEx)
+                {
+                    Console.WriteLine($"{mongoEx.Message} {mongoEx.StackTrace}");
+                    await component.RespondAsync("Произошла ошибка при доступе к базе данных");
+                }
+                catch (Exception listEx) when (listEx is ArgumentOutOfRangeException || listEx is FormatException)
+                {
+                    Console.WriteLine($"{listEx.Message} {listEx.StackTrace}");
+                    await component.RespondAsync("Выбранный персонаж игрока уже более не существует", ephemeral: true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            private Embed CreateAnswerEmbed(in Person person)
+            {
+                EmbedBuilder embedBuilder = new EmbedBuilder();
+                embedBuilder.WithColor(Color.DarkPurple).WithTitle($"Характеристики персонажа {person.Name}");
+                embedBuilder.WithDescription(CreateDescriptionForEmbed(person));
+                return embedBuilder.Build();
+            }
+            private string CreateDescriptionForEmbed(Person person)
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                stringBuilder.AppendLine($"**Здоровье: {person.Health}**");
+                stringBuilder.AppendLine($"**Мораль: {person.Mental}**");
+                stringBuilder.AppendLine("\n**Интеллект**");
+                foreach (Skills.Perk perk in person.SkillSet.Intellect.PerkList)
+                {
+                    AddInfoAboutPerk(stringBuilder, perk);
+                }
+                stringBuilder.Append("Максимальное количество очков: ");
+                stringBuilder.AppendLine(person.SkillSet.Intellect.MaxPoints.ToString());
+
+                stringBuilder.AppendLine("\n**Психика**");
+                foreach (Skills.Perk perk in person.SkillSet.Psyche.PerkList)
+                {
+                    AddInfoAboutPerk(stringBuilder, perk);
+                }
+                stringBuilder.Append("Максимальное количество очков: ");
+                stringBuilder.AppendLine(person.SkillSet.Psyche.MaxPoints.ToString());
+
+                stringBuilder.AppendLine("\n**Физика**");
+                foreach (Skills.Perk perk in person.SkillSet.Physique.PerkList)
+                {
+                    AddInfoAboutPerk(stringBuilder, perk);
+                }
+                stringBuilder.Append("Максимальное количество очков: ");
+                stringBuilder.AppendLine(person.SkillSet.Physique.MaxPoints.ToString());
+
+                stringBuilder.AppendLine("\n**Моторика**");
+                foreach (Skills.Perk perk in person.SkillSet.Motorics.PerkList)
+                {
+                    AddInfoAboutPerk(stringBuilder, perk);
+                }
+                stringBuilder.Append("Максимальное количество очков: ");
+                stringBuilder.AppendLine(person.SkillSet.Motorics.MaxPoints.ToString());
+                stringBuilder.Append("\nСвободных очков на распределение: ");
+                stringBuilder.AppendLine(person.FreePoints.ToString());
+                return stringBuilder.ToString();
+            }
+            private void AddInfoAboutPerk(StringBuilder stringBuilder, Skills.Perk perk)
+            {
+                stringBuilder.Append(perk.GetTranslatedName());
+                stringBuilder.Append(": ");
+                stringBuilder.Append(perk.points.ToString());
+                if (perk.isSpeciality)
+                {
+                    stringBuilder.Append(" *коронный*");
+                }
+                stringBuilder.Append("\n");
             }
 
         }

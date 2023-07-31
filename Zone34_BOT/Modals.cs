@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Zone34_BOT
 {
-    enum ModalTypes
+    enum ModalIds
     {
         Creation,
         Showing
@@ -27,7 +27,7 @@ namespace Zone34_BOT
         {
             Dictionary<string, CallModal> LookupModals = new Dictionary<string, CallModal>()
         {
-            {ModalTypes.Creation.ToString(), new RPSystem.CreationCharacter().GetInfoForCreate}
+            {ModalIds.Creation.ToString(), new RPSystem.CreationCharacter().GetInfoForCreate}
         };
 
             try

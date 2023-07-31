@@ -57,6 +57,7 @@ namespace Zone34_BOT
             const ulong Zone34_guild = 863762608930160650;
             RoleListCommand(slashCmdList);
             CreateCharacterCommand(slashCmdList);
+            ShowPersonInfo(slashCmdList);
             try
             {
                 foreach (var slashCmd in slashCmdList)
