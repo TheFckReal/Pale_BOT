@@ -10,7 +10,8 @@ namespace Zone34_BOT
     enum ModalIds
     {
         Creation,
-        Showing
+        Showing,
+        Changing
     }
     internal class Modals
     {
@@ -27,7 +28,8 @@ namespace Zone34_BOT
         {
             Dictionary<string, CallModal> LookupModals = new Dictionary<string, CallModal>()
         {
-            {ModalIds.Creation.ToString(), new RPSystem.CreationCharacter().GetInfoForCreate}
+            {ModalIds.Creation.ToString(), new RPSystem.CreationCharacter().GetInfoForCreateAsync},
+                {ModalIds.Changing.ToString(), new RPSystem.ChangingCharacter().ChangingDataPersonAsync }
         };
 
             try

@@ -46,6 +46,17 @@ namespace Zone34_BOT
           System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
     }
 
+    [Serializable]
+    public class ChangingCharacterException : Exception
+    {
+        public ChangingCharacterException() { }
+        public ChangingCharacterException(string message) : base(message) { }
+        public ChangingCharacterException(string message, Exception inner) : base(message, inner) { }
+        protected ChangingCharacterException(
+          System.Runtime.Serialization.SerializationInfo info,
+          System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
+    }
+
     internal class RPSystem
     {
         readonly ILogger _logger;
@@ -434,6 +445,91 @@ namespace Zone34_BOT
             }
         }
 
+        public class Shared
+        {
+            private readonly MemoryCache _cache;
+            public Shared()
+            {
+                _cache = CacheSingleton.GetInstance();
+            }
+            public async Task SendSelectMenuForSelectPersonAsync(SocketSlashCommand command, SocketGuildUser mentionedUser, SelectMenuIds selectMenuId)
+            {
+                User? user = null;
+                if ((user = _cache.Get<User>(mentionedUser.Id)) == null)
+                {
+                    var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
+                    using (var cursor = await userCollection.FindAsync<User>(x => x.UserId == mentionedUser.Id))
+                    {
+                        user = cursor.FirstOrDefault();
+                    }
+                }
+                if (user != null)
+                {
+                    if (user.Persons.Count > 0)
+                    {
+                        await command.RespondAsync($"Персонажи {mentionedUser.Mention}", ephemeral: true, components: new ComponentBuilder().WithSelectMenu(CreatePersonsSelectMenu(user.Persons, selectMenuId)).Build());
+                    }
+                    else
+                    {
+                        await command.RespondAsync($"У пользователя {mentionedUser.DisplayName} нет персонажей", ephemeral: true);
+                    }
+                }
+                else
+                {
+                    await command.RespondAsync($"У пользователя {mentionedUser.DisplayName} нет персонажей", ephemeral: true);
+                }
+            }
+
+
+            private SelectMenuBuilder CreatePersonsSelectMenu(IReadOnlyList<Person> persons, SelectMenuIds selectMenuId)
+            {
+                SelectMenuBuilder builder = new SelectMenuBuilder();
+                builder = builder.WithCustomId(selectMenuId.ToString()).WithMinValues(1).WithMaxValues(1).WithPlaceholder("Выберите персонажа").WithType(ComponentType.SelectMenu);
+                int iter = 0;
+                foreach (var person in persons)
+                {
+                    builder = builder.AddOption(person.Name, (iter++).ToString());
+                }
+                return builder;
+            }
+
+            public async Task<User?> GetUserFromRepositoryAsync(ulong userId)
+            {
+                User? user = null;
+                var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
+                if ((user = _cache.Get<User>(userId)) == null)
+                {
+                    using (var cursor = await userCollection.FindAsync<User>(x => x.UserId == userId))
+                    {
+                        user = cursor.FirstOrDefault();
+                    }
+                }
+                return user;
+            }
+
+            public static Perk? GetCrownedPerkOrDefault(ISkill[] skillArray)
+            {
+                foreach (ISkill skill in skillArray)
+                {
+                    foreach (Perk perk in skill.PerkList)
+                    {
+                        if (perk.isSpeciality)
+                        {
+                            return perk;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            public async Task SaveToAllRepository(User user)
+            {
+                var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
+                await userCollection.ReplaceOneAsync(x => x.UserId == user.UserId, user, new ReplaceOptions { IsUpsert = true });
+                _cache.Set<User>(user.UserId, user, CacheSingleton.GetStandartCacheEntryOptions());
+            }
+        }
+
         public class RoleList
         {
 
@@ -534,19 +630,12 @@ namespace Zone34_BOT
             /// </summary>
             /// <param name="command"></param>
             /// <returns></returns>
-            public async Task CreateCharacter(SocketSlashCommand command)
+            public async Task CreateCharacterAsync(SocketSlashCommand command)
             {
                 try
                 {
-                    var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
                     User? user;
-                    if ((user = _cache.Get<User?>(command.User.Id)) == null)
-                    {
-                        using (var cursor = await userCollection.FindAsync<User>(x => x.UserId == command.User.Id))
-                        {
-                            user = cursor.FirstOrDefault();
-                        }
-                    }
+                    user = await new Shared().GetUserFromRepositoryAsync(command.User.Id);
                     if (user is not null)
                     {
                         if (user.Persons.Count() < 3)
@@ -598,7 +687,7 @@ namespace Zone34_BOT
             /// </summary>
             /// <param name="socketModal"></param>
             /// <returns></returns>
-            public async Task GetInfoForCreate(SocketModal socketModal)
+            public async Task GetInfoForCreateAsync(SocketModal socketModal)
             {
                 var components = socketModal.Data.Components;
                 User? user = null;
@@ -646,14 +735,7 @@ namespace Zone34_BOT
                     newPerson.Health = newPerson.SkillSet.Physique.Endurance.points;
                     newPerson.Mental = newPerson.SkillSet.Psyche.Willpower.points;
                     // get the info about user
-                    var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
-                    if ((user = _cache.Get<User>(socketModal.User.Id)) == null)
-                    {
-                        using (var cursor = await userCollection.FindAsync<User>(x => x.UserId == socketModal.User.Id))
-                        {
-                            user = cursor.FirstOrDefault();
-                        }
-                    }
+                    user = await new Shared().GetUserFromRepositoryAsync(socketModal.User.Id);
                     if (user == null)
                     {
                         FillInfoUser(out user, socketModal.User.Id);
@@ -661,8 +743,7 @@ namespace Zone34_BOT
                     if (user.Persons.Count < 3)
                     {
                         user.Persons.Add(newPerson);
-                        await userCollection.ReplaceOneAsync(x => x.UserId == user.UserId, user, new ReplaceOptions { IsUpsert = true });
-                        _cache.Set<User>(user.UserId, user, CacheSingleton.GetStandartCacheEntryOptions());
+                        await new Shared().SaveToAllRepository(user);
                         await socketModal.RespondAsync("Персонаж был успешно создан", ephemeral: true);
                     }
                     else
@@ -724,13 +805,13 @@ namespace Zone34_BOT
                 {
                     int value = Convert.ToInt32(perksValue.Value);
                     count += value;
-                    //AddPointsToPerkByNameRus(perksValue.Key, person, value);
                     AddPointsToPerkByNameRus(perksValue.Key, new ISkill[] { person.SkillSet.Intellect, person.SkillSet.Psyche, person.SkillSet.Physique, person.SkillSet.Motorics }, value);
                 }
                 if (count > person.FreePoints)
                 {
                     throw new CreatingCharacterException($"Количество очков, затрачиваемых на прокачку персонажа, не может превышать {person.FreePoints}");
-                } else
+                }
+                else
                     person.FreePoints -= count;
             }
 
@@ -821,7 +902,7 @@ namespace Zone34_BOT
             //    }
             //}
 
-            private void AddPointsToPerkByNameRus(string perkNameRus, Skills.ISkill[] skillArray, int value)
+            public void AddPointsToPerkByNameRus(string perkNameRus, Skills.ISkill[] skillArray, int value)
             {
                 bool isPerkFounded = false;
                 foreach (Skills.ISkill skill in skillArray)
@@ -966,12 +1047,12 @@ namespace Zone34_BOT
             {
                 _cache = CacheSingleton.GetInstance();
             }
-            public async Task ShowCharacter(SocketSlashCommand command)
+            public async Task ShowCharacterAsync(SocketSlashCommand command)
             {
                 try
                 {
                     SocketGuildUser mentionedUser = (SocketGuildUser)command.Data.Options.First().Value;
-                    await SendSelectMenuForSelectPerson(command, mentionedUser);
+                    await new Shared().SendSelectMenuForSelectPersonAsync(command, mentionedUser, SelectMenuIds.ShowPerson);
                 }
                 catch (MongoException mongoEx)
                 {
@@ -989,60 +1070,13 @@ namespace Zone34_BOT
                 }
             }
 
-            private async Task SendSelectMenuForSelectPerson(SocketSlashCommand command, SocketGuildUser mentionedUser)
-            {
-                User? user = null;
-                if ((user = _cache.Get<User>(mentionedUser.Id)) == null)
-                {
-                    var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
-                    using (var cursor = await userCollection.FindAsync<User>(x => x.UserId == mentionedUser.Id))
-                    {
-                        user = cursor.FirstOrDefault();
-                    }
-                }
-                if (user != null)
-                {
-                    if (user.Persons.Count > 0)
-                    {
-                        await command.RespondAsync($"Персонажи {mentionedUser.Mention}", ephemeral: true, components: new ComponentBuilder().WithSelectMenu(CreatePersonsSelectMenu(user.Persons)).Build());
-                    }
-                    else
-                    {
-                        await command.RespondAsync($"У пользователя {mentionedUser.DisplayName} нет персонажей", ephemeral: true);
-                    }
-                }
-                else
-                {
-                    await command.RespondAsync($"У пользователя {mentionedUser.DisplayName} нет персонажей", ephemeral: true);
-                }
-            }
-
-            private SelectMenuBuilder CreatePersonsSelectMenu(IReadOnlyList<Person> persons)
-            {
-                SelectMenuBuilder builder = new SelectMenuBuilder();
-                builder = builder.WithCustomId(SelectMenuIds.ShowPerson.ToString()).WithMinValues(1).WithMaxValues(1).WithPlaceholder("Выберите персонажа").WithType(ComponentType.SelectMenu);
-                int iter = 0;
-                foreach (var person in persons)
-                {
-                    builder = builder.AddOption(person.Name, (iter++).ToString());
-                }
-                return builder;
-            }
-
-            public async Task ShowingCharacterInfo(SocketMessageComponent component)
+            public async Task ShowingCharacterInfoAsync(SocketMessageComponent component)
             {
                 try
                 {
                     var mentionedUser = component.Message.MentionedUsers.First();
                     User? user = null;
-                    var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
-                    if ((user = _cache.Get<User>(mentionedUser.Id)) == null)
-                    {
-                        using (var cursor = await userCollection.FindAsync<User>(x => x.UserId == mentionedUser.Id))
-                        {
-                            user = cursor.FirstOrDefault();
-                        }
-                    }
+                    user = await new Shared().GetUserFromRepositoryAsync(mentionedUser.Id);
                     if (user != null)
                     {
                         int numInList = Convert.ToInt32(component.Data.Values.First());
@@ -1129,6 +1163,226 @@ namespace Zone34_BOT
                 stringBuilder.Append("\n");
             }
 
+        }
+
+        public class ChangingCharacter
+        {
+            private readonly MemoryCache _cache;
+            public ChangingCharacter()
+            {
+                _cache = CacheSingleton.GetInstance();
+            }
+            public async Task ChangeCharacterAsync(SocketSlashCommand command)
+            {
+                try
+                {
+                    SocketGuildUser mentionedUser = (SocketGuildUser)command.Data.Options.First().Value;
+                    await new Shared().SendSelectMenuForSelectPersonAsync(command, mentionedUser, SelectMenuIds.ChangePerson);
+                }
+                catch (MongoException mongoEx)
+                {
+                    await command.RespondAsync("Произошла ошибка при доступе к базе данных. Обратитесь к поддержке");
+                    Console.WriteLine(mongoEx.Message);
+                }
+                catch (Exception ex) when (ex is ArgumentNullException || ex is InvalidOperationException)
+                {
+                    await command.RespondAsync("Не было упомянуто ни одного пользователя");
+                    Console.WriteLine(ex.Message);
+                }
+                catch (Exception ex2)
+                {
+                    await command.RespondAsync("Произошла непредвиденная ошибка при попытке увидеть персонажей игрока");
+                    Console.WriteLine(ex2.Message);
+                }
+            }
+
+            public async Task GetInfoForChangingAsync(SocketMessageComponent component)
+            {
+                try
+                {
+                    var mentionedUser = component.Message.MentionedUsers.First();
+                    User? user = null;
+                    user = await new Shared().GetUserFromRepositoryAsync(mentionedUser.Id);
+                    if (user != null)
+                    {
+                        SocketGuildUser guildUser = (SocketGuildUser)component.User;
+                        bool getAboutPointsInfo = false;
+                        if (guildUser.Roles.FirstOrDefault(x => x.Permissions.KickMembers) != null)
+                        {
+                            getAboutPointsInfo = true;
+                        }
+                        int numPers = Convert.ToInt32(component.Data.Values.First());
+                        Modal respondModal = CreateChangingModal(user.Persons[numPers], mentionedUser.Id, getAboutPointsInfo, numPers);
+                        await component.RespondWithModalAsync(respondModal);
+                        //await FillPersonInfoAsync(component);
+                    }
+                    else
+                    {
+                        await component.RespondAsync("У указанного пользователя нет персонажей", ephemeral: true);
+                    }
+                }
+                catch (System.NotSupportedException notSup)
+                {
+                    Console.WriteLine($"{notSup.Message}");
+                }
+                catch (MongoException mongoEx)
+                {
+                    await component.RespondAsync("Произошла ошибка при доступе к базе данных");
+                    Console.WriteLine(mongoEx.Message);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message + " " + ex.StackTrace +  "\nType: " + ex.GetType().ToString());
+                    await component.RespondAsync("Произошла непредвиденная ошибка");
+                }
+            }
+
+            private Modal CreateChangingModal(Person person, ulong userID, bool getPointsInfo, int personCount)
+            {
+                ModalBuilder modalBuilder = new ModalBuilder();
+                modalBuilder = modalBuilder.WithTitle("Изменение персонажа");
+                modalBuilder = modalBuilder.WithCustomId(ModalIds.Changing.ToString());
+                modalBuilder = modalBuilder.AddTextInput("Введите имя персонажа", $"name_{userID}", TextInputStyle.Short, maxLength: 64, minLength: 1, required: false, value: person.Name);
+                if (getPointsInfo)
+                {
+                    modalBuilder = modalBuilder.AddTextInput("Использовать свободные очки?", "points", TextInputStyle.Short, placeholder: "Да или нет", required: true, value: "нет");
+                }
+
+                TextInputBuilder txtInputSkillsBuilder = new() { CustomId = $"skills_{personCount}", Label = $"Добавьте нужное кол-во очков (доступно: {person.FreePoints})", Required = true, Placeholder = "Формат: [навык слитно на русском]:[значение] через пробел.\nНапример,\nэквалибристика:4 моторика:2", Style = TextInputStyle.Paragraph};
+                modalBuilder = modalBuilder.AddTextInput(txtInputSkillsBuilder);
+                return modalBuilder.Build();
+            }
+
+            public async Task ChangingDataPersonAsync(SocketModal socketModal)
+            {
+                try
+                {
+                    ulong userId = ulong.MinValue;
+                    string name = "", skills = "";
+                    bool usePoints = true;
+                    int numPers = int.MinValue;
+                    foreach (SocketMessageComponentData data in socketModal.Data.Components)
+                    {
+                        if (data.CustomId.StartsWith("name"))
+                        {
+                            userId = Convert.ToUInt64(data.CustomId.Substring(data.CustomId.IndexOf("_") + 1));
+                            name = data.Value;
+                        }
+                        else if (data.CustomId.StartsWith("skills"))
+                        {
+                            numPers = Convert.ToInt32(data.CustomId.Substring(data.CustomId.IndexOf("_") + 1));
+                            skills = data.Value;
+                        }
+                        else if (data.CustomId == "points")
+                        {
+                            if (data.Value.ToLower() == "нет")
+                            {
+                                usePoints = false;
+                            }
+                        }
+                    }
+                    if (userId == ulong.MinValue || numPers == int.MinValue)
+                        throw new ArgumentException("UserID or number of person cannot be min value");
+                    User? user;
+                    user = await new Shared().GetUserFromRepositoryAsync(userId);
+                    if (user == null)
+                        throw new ArgumentException("У пользователя нет персонажей");
+                    int oldWillpower = user.Persons[numPers].SkillSet.Psyche.Willpower.points;
+                    int oldEndurance = user.Persons[numPers].SkillSet.Physique.Endurance.points;
+                    user.Persons[numPers] = CalculatePerson(user, numPers, name, skills, usePoints);
+                    user.Persons[numPers].Mental += user.Persons[numPers].SkillSet.Psyche.Willpower.points - oldWillpower;
+                    user.Persons[numPers].Health += user.Persons[numPers].SkillSet.Physique.Endurance.points - oldEndurance;
+                    await new Shared().SaveToAllRepository(user);
+                    await socketModal.RespondAsync("Изменения успешно сохранены", ephemeral: true);
+                }
+                catch (CreatingCharacterException crEx)
+                {
+                    await socketModal.RespondAsync(crEx.Message);
+                    Console.WriteLine(crEx.Message);
+                }
+                catch (ArgumentException argEx)
+                {
+                    await socketModal.RespondAsync(argEx.Message);
+                    Console.WriteLine(argEx.Message);
+                }
+                catch (Exception ex) when (ex is FormatException || ex is OverflowException)
+                {
+                    await socketModal.RespondAsync("Некорректный ввод");
+                    Console.WriteLine(ex.Message);
+                }
+                catch (Exception ex)
+                {
+                    await socketModal.RespondAsync("Произошла непредвиденная ошибка");
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            private Person CalculatePerson(User user, int numPers, string name, string skills, bool usePoints)
+            {
+                Person changingPerson = user.Persons[numPers];
+                changingPerson.Name = name;
+                StatCalculus(ComparePerksValues(skills), changingPerson, usePoints);
+                return changingPerson;
+            }
+
+            private Dictionary<string, int> ComparePerksValues(string inputedString)
+            {
+                Dictionary<string, int> perksValues = new Dictionary<string, int>();
+                inputedString = inputedString.ToLower();
+                string[] inputedStringArray = inputedString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                foreach (string pair in inputedStringArray)
+                {
+                    string[] elements = pair.Split(':');
+                    if (elements.Length != 2)
+                        throw new FormatException("Элементов, разделенных :, не может быть больше 2");
+                    perksValues.Add(elements[0], Convert.ToInt32(elements[1]));
+                }
+                return perksValues;
+            }
+
+            private void StatCalculus(Dictionary<string, int> perkValuePair, Person person, bool usePoints)
+            {
+                int count = 0;
+                foreach (var perksValue in perkValuePair)
+                {
+                    int value = Convert.ToInt32(perksValue.Value);
+                    count += value;
+                    AddPointsToPerkByNameRus(perksValue.Key, new ISkill[] { person.SkillSet.Intellect, person.SkillSet.Psyche, person.SkillSet.Physique, person.SkillSet.Motorics }, value, usePoints);
+                }
+                if (usePoints)
+                {
+                    if (count > person.FreePoints)
+                    {
+                        throw new ChangingCharacterException($"Количество очков, затрачиваемых на прокачку персонажа, не может превышать {person.FreePoints}");
+                    }
+                    else
+                        person.FreePoints -= count;
+                }
+            }
+
+            private void AddPointsToPerkByNameRus(string perkNameRus, Skills.ISkill[] skillArray, int value, bool usePoints)
+            {
+                bool isPerkFounded = false;
+                foreach (Skills.ISkill skill in skillArray)
+                {
+                    foreach (Skills.Perk perk in skill.PerkList)
+                    {
+                        if (perkNameRus == perk.GetTranslatedName().ToLower().Replace(" ", ""))
+                        {
+                            isPerkFounded = true;
+                            perk.points += value;
+                            if (usePoints)
+                                if (perk.points > skill.MaxPoints)
+                                    throw new ChangingCharacterException($"Количество добавляемых очков в этот навык не может быть ниже 1 и больше {skill.MaxPoints}");
+                            return;
+                        }
+                    }
+                }
+                if (isPerkFounded == false)
+                {
+                    throw new ChangingCharacterException("Необходимо внести корректные данные при выборе навыка");
+                }
+            }
         }
     }
 

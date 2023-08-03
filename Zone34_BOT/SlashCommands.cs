@@ -32,11 +32,12 @@ namespace Zone34_BOT
         {
             CallCommand? callCommand = null;
             Dictionary<string, CallCommand> LookupCommands = new Dictionary<string, CallCommand>()
-        {
-            {"listperks", new RPSystem.RoleList().ShowRoleList},
-            {"create", new RPSystem.CreationCharacter().CreateCharacter},
-            {"show", new RPSystem.ShowingCharacter().ShowCharacter }
-        };
+            {
+                {"listperks", new RPSystem.RoleList().ShowRoleList},
+                {"create", new RPSystem.CreationCharacter().CreateCharacterAsync},
+                {"show", new RPSystem.ShowingCharacter().ShowCharacterAsync },
+                {"change", new RPSystem.ChangingCharacter().ChangeCharacterAsync }
+            };
             try
             {
                 if (LookupCommands.TryGetValue(command.CommandName, out callCommand))
@@ -58,6 +59,7 @@ namespace Zone34_BOT
             RoleListCommand(slashCmdList);
             CreateCharacterCommand(slashCmdList);
             ShowPersonInfo(slashCmdList);
+            ChangePersonInfo(slashCmdList);
             try
             {
                 foreach (var slashCmd in slashCmdList)
@@ -96,14 +98,21 @@ namespace Zone34_BOT
         {
             var command = new SlashCommandBuilder();
             command.WithName("create");
-            command.WithDescription("Команда позволяет создать персонажа и распределить ему характеристики");
+            command.WithDescription("Позволяет создать персонажа и распределить ему характеристики");
             listCommands.Add(command);
         }
 
         private void ShowPersonInfo(List<SlashCommandBuilder> listCommands)
         {
             var command = new SlashCommandBuilder()
-                .WithName("show").WithDescription("Команда позволяет увидеть характеристики персонажа выбранного пользователя").AddOption("user", ApplicationCommandOptionType.User, "Пользователь, персонажей которого вы хотите посмотреть", isRequired: true);
+                .WithName("show").WithDescription("Позволяет увидеть характеристики персонажа выбранного пользователя").AddOption("user", ApplicationCommandOptionType.User, "Пользователь, персонажей которого вы хотите посмотреть", isRequired: true);
+            listCommands.Add(command);
+        }
+
+        private void ChangePersonInfo(List<SlashCommandBuilder> listCommands)
+        {
+            var command = new SlashCommandBuilder()
+                .WithName("change").WithDescription("Позволяет изменить характеристики персонажа выбранного игрока").AddOption("user", ApplicationCommandOptionType.User, "Пользователь, персонажа которого вы хотите изменить", isRequired: true);
             listCommands.Add(command);
         }
     }
