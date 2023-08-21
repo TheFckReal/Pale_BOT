@@ -6,16 +6,9 @@ using Discord.Net;
 using Discord.Rest;
 using Discord.WebSocket;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using static Zone34_BOT.RPSystem.User.Person.Skills;
+using static Pale_BOT.RPSystem.User.Person.Skills;
 
-namespace Zone34_BOT
+namespace Pale_BOT
 {
     internal class SlashCommands
     {
@@ -139,7 +132,6 @@ namespace Zone34_BOT
                         .WithDescription("Название перка, модификатор которого будет использоваться")
                         .WithRequired(true)
                         .WithType(ApplicationCommandOptionType.String);
-            //int count = 0;
             foreach (var statDescr in IntellectSkill.StatDescription)
             {
                 intellectChoice.AddChoice(statDescr.Key, statDescr.Key);

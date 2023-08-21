@@ -8,23 +8,11 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using NLog;
-using NLog.Fluent;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.Contracts;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
 using System.Text;
-using System.Threading.Tasks;
-using ZstdSharp;
-using static Zone34_BOT.RPSystem;
-using static Zone34_BOT.RPSystem.User;
-using static Zone34_BOT.RPSystem.User.Person;
-using static Zone34_BOT.RPSystem.User.Person.Skills;
+using static Pale_BOT.RPSystem.User.Person;
+using static Pale_BOT.RPSystem.User.Person.Skills;
 
-namespace Zone34_BOT
+namespace Pale_BOT
 {
     enum PerksId : long
     {

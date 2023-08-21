@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Zone34_BOT
+namespace Pale_BOT
 {
     enum ModalIds
     {

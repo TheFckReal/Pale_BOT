@@ -6,7 +6,7 @@ using MongoDB.Driver;
 using NLog;
 using System.Text.Json.Nodes;
 
-namespace Zone34_BOT
+namespace Pale_BOT
 {
     internal class Program
     {
@@ -36,7 +36,7 @@ namespace Zone34_BOT
 
         private void Configure()
         {
-
+            
         }
 
         private DiscordSocketConfig ClientConfigCreate()
