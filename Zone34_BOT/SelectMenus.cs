@@ -10,7 +10,9 @@ namespace Zone34_BOT
     enum SelectMenuIds
     {
         ShowPerson,
-        ChangePerson
+        ChangePerson,
+        RollPerson,
+        DeletePerson
     }
     internal class SelectMenus
     {
@@ -28,7 +30,9 @@ namespace Zone34_BOT
             Dictionary<string, CallSelectMenu> LookupSelectMenu = new Dictionary<string, CallSelectMenu>()
             {
                 { SelectMenuIds.ShowPerson.ToString(), new RPSystem.ShowingCharacter().ShowingCharacterInfoAsync },
-                {SelectMenuIds.ChangePerson.ToString(), new RPSystem.ChangingCharacter().GetInfoForChangingAsync }
+                {SelectMenuIds.ChangePerson.ToString(), new RPSystem.ChangingCharacter().GetInfoForChangingAsync },
+                {SelectMenuIds.RollPerson.ToString(), new RPSystem.RollPerks().ChoosePersonAsync },
+                {SelectMenuIds.DeletePerson.ToString(), new RPSystem.Delete().DeletePerson }
             };
             if (LookupSelectMenu.TryGetValue(component.Data.CustomId, out CallSelectMenu? callSelectMenu))
             {
