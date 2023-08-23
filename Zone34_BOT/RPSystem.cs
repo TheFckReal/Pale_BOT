@@ -1072,10 +1072,10 @@ namespace Pale_BOT
                     await new Shared().SaveToAllRepository(user);
                     await socketModal.RespondAsync("Изменения успешно сохранены", ephemeral: true);
                 }
-                catch (CreatingCharacterException crEx)
+                catch (ChangingCharacterException changeEx)
                 {
-                    await socketModal.RespondAsync(crEx.Message);
-                    Console.WriteLine(crEx.Message);
+                    await socketModal.RespondAsync(changeEx.Message, ephemeral: true);
+                    Console.WriteLine(changeEx.Message);
                 }
                 catch (ArgumentException argEx)
                 {
@@ -1084,7 +1084,7 @@ namespace Pale_BOT
                 }
                 catch (Exception ex) when (ex is FormatException || ex is OverflowException)
                 {
-                    await socketModal.RespondAsync("Некорректный ввод");
+                    await socketModal.RespondAsync("Некорректный ввод", ephemeral: true);
                     Console.WriteLine(ex.Message);
                 }
                 catch (Exception ex)
