@@ -32,7 +32,8 @@ namespace Pale_BOT
                 {"show", new RPSystem.ShowingCharacter().ShowCharacterAsync },
                 {"change", new RPSystem.ChangingCharacter().ChangeCharacterAsync },
                 {"roll", new RPSystem.RollPerks().RollingPerksAsync },
-                {"delete", new RPSystem.Delete().ChooseDeletePerson }
+                {"delete", new RPSystem.Delete().ChooseDeletePerson },
+                {"give", new RPSystem.Give().GivePoints }
             };
             try
             {
@@ -60,6 +61,7 @@ namespace Pale_BOT
                 ChangePersonInfo(slashCmdList);
                 RollPerk(slashCmdList);
                 DeletePerson(slashCmdList);
+                GivePoints(slashCmdList);
                 foreach (var slashCmd in slashCmdList)
                 {
                     await _client.Rest.CreateGuildCommand(slashCmd.Build(), Zone34_guild);
@@ -197,6 +199,107 @@ namespace Pale_BOT
                 .AddOption(psycheOptionBuilder)
                 .AddOption(physiqueOptionBuilder)
                 .AddOption(motoricsOptionBuilder);
+            listCommands.Add(slashCommandBuilder);
+        }
+
+        private void GivePoints(List<SlashCommandBuilder> listCommands)
+        {
+            /* Intellect skills option */
+            var intellectChoice = new SlashCommandOptionBuilder()
+                        .WithName("perk")
+                        .WithDescription("Название перка, который будет изменяться")
+                        .WithRequired(true)
+                        .WithType(ApplicationCommandOptionType.String);
+            foreach (var statDescr in IntellectSkill.StatDescription)
+            {
+                intellectChoice.AddChoice(statDescr.Key, statDescr.Key);
+            }
+            var intellectSubcommandBuilder = new SlashCommandOptionBuilder()
+                    .WithName(nameof(RPSystem.User.Person.Skills.Intellect).ToLower())
+                    .WithDescription("Используются интеллектуальные навыки")
+                    .WithType(ApplicationCommandOptionType.SubCommand)
+                    .AddOption(intellectChoice)
+                    .AddOption("user", ApplicationCommandOptionType.User, "Пользователь, которому необходимо изменить значение", isRequired: true)
+                    .AddOption("value", ApplicationCommandOptionType.Integer, "Добавляемое значение", isRequired: true);
+
+            /* Psyche skills option */
+            var psycheChoice = new SlashCommandOptionBuilder()
+                .WithName("perk")
+                .WithDescription("Название перка, который будет изменяться")
+                .WithType(ApplicationCommandOptionType.String)
+                .WithRequired(true);
+            foreach (var statDescr in PsycheSkill.StatDescription)
+            {
+                psycheChoice.AddChoice(statDescr.Key, statDescr.Key);
+            }
+            var psycheSubcommandBuilder = new SlashCommandOptionBuilder()
+                .WithName(nameof(RPSystem.User.Person.Skills.Psyche).ToLower())
+                .WithDescription("Используются психические навыки")
+                .WithType(ApplicationCommandOptionType.SubCommand)
+                .AddOption(psycheChoice)
+                .AddOption("user", ApplicationCommandOptionType.User, "Пользователь, которому необходимо изменить значение", isRequired: true)
+                .AddOption("value", ApplicationCommandOptionType.Integer, "Добавляемое значение", isRequired: true);
+
+            /* Physique skills option */
+            var physiqueChoice = new SlashCommandOptionBuilder()
+                .WithName("perk")
+                .WithDescription("Название перка, который будет изменяться")
+                .WithRequired(true)
+                .WithType(ApplicationCommandOptionType.String);
+            foreach (var statDescr in PhysiqueSkill.StatDescription)
+            {
+                physiqueChoice.AddChoice(statDescr.Key, statDescr.Key);
+            }
+            var physiqueSubcommandBuilder = new SlashCommandOptionBuilder()
+                .WithName(nameof(RPSystem.User.Person.Skills.Physique).ToLower())
+                .WithDescription("Используются физические навыки")
+                .WithType(ApplicationCommandOptionType.SubCommand)
+                .AddOption(physiqueChoice)
+                .AddOption("user", ApplicationCommandOptionType.User, "Пользователь, которому необходимо изменить значение", isRequired: true)
+                .AddOption("value", ApplicationCommandOptionType.Integer, "Добавляемое значениe", isRequired: true);
+
+            /* Motorics skills option */
+            var motoricsChoice = new SlashCommandOptionBuilder()
+                .WithName("perk")
+                .WithDescription("Название перка, модификатор которого будет использоваться")
+                .WithRequired(true)
+                .WithType(ApplicationCommandOptionType.String);
+            foreach (var statDescr in MotoricsSkill.StatDescription)
+            {
+                motoricsChoice.AddChoice(statDescr.Key, statDescr.Key);
+            }
+            var motoricsSubcommandBuilder = new SlashCommandOptionBuilder()
+                .WithName(nameof(RPSystem.User.Person.Skills.Motorics).ToLower())
+                .WithDescription("Используются навыки моторики")
+                .WithType(ApplicationCommandOptionType.SubCommand)
+                .AddOption(motoricsChoice)
+                .AddOption("user", ApplicationCommandOptionType.User, "Пользователь, которому необходимо изменить значение", isRequired: true)
+                .AddOption("value", ApplicationCommandOptionType.Integer, "Добавляемое значение", isRequired: true);
+
+            /* HP option */
+            var HPChoice = new SlashCommandOptionBuilder()
+                .WithName("health")
+                .WithDescription("Изменение здоровья")
+                .WithType(ApplicationCommandOptionType.SubCommand)
+                .AddOption("user", ApplicationCommandOptionType.User, "Пользователь, которому необходимо изменить значение", isRequired: true)
+                .AddOption("value", ApplicationCommandOptionType.Integer, "Добавляемое значение", isRequired: true);
+
+            /* Moral option */
+            var moralChoice = new SlashCommandOptionBuilder()
+                .WithName("moral")
+                .WithDescription("Изменение морали")
+                .WithType(ApplicationCommandOptionType.SubCommand)
+                .AddOption("user", ApplicationCommandOptionType.User, "Пользователь, которому необходимо изменить значение", isRequired: true)
+                .AddOption("value", ApplicationCommandOptionType.Integer, "Добавляемое значение", isRequired: true);
+
+            SlashCommandBuilder slashCommandBuilder = new SlashCommandBuilder().WithName("give")
+                .WithDescription("Добавляет (либо вычитает, если отрицательное) значение атрибута")
+                .AddOption(intellectSubcommandBuilder)
+                .AddOption(psycheSubcommandBuilder)
+                .AddOption(physiqueSubcommandBuilder)
+                .AddOption(motoricsSubcommandBuilder)
+                .AddOption(HPChoice)
+                .AddOption(moralChoice);
             listCommands.Add(slashCommandBuilder);
         }
     }

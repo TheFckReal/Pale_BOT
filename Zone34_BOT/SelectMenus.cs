@@ -6,7 +6,8 @@ namespace Pale_BOT
         ShowPerson,
         ChangePerson,
         RollPerson,
-        DeletePerson
+        DeletePerson,
+        GivePoints
     }
     internal class SelectMenus
     {
@@ -26,7 +27,8 @@ namespace Pale_BOT
                 { SelectMenuIds.ShowPerson.ToString(), new RPSystem.ShowingCharacter().ShowingCharacterInfoAsync },
                 {SelectMenuIds.ChangePerson.ToString(), new RPSystem.ChangingCharacter().GetInfoForChangingAsync },
                 {SelectMenuIds.RollPerson.ToString(), new RPSystem.RollPerks().ChoosePersonAsync },
-                {SelectMenuIds.DeletePerson.ToString(), new RPSystem.Delete().DeletePerson }
+                {SelectMenuIds.DeletePerson.ToString(), new RPSystem.Delete().DeletePerson },
+                {SelectMenuIds.GivePoints.ToString(), new RPSystem.Give().GetPersonFromSelectMenu }
             };
             if (LookupSelectMenu.TryGetValue(component.Data.CustomId, out CallSelectMenu? callSelectMenu))
             {

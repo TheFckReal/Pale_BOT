@@ -10,7 +10,10 @@ using MongoDB.Driver;
 using NLog;
 using System.Text;
 using static Pale_BOT.RPSystem.User.Person;
+using static Pale_BOT.RPSystem.User;
 using static Pale_BOT.RPSystem.User.Person.Skills;
+using System.Text.RegularExpressions;
+using System.ComponentModel;
 
 namespace Pale_BOT
 {
@@ -460,6 +463,8 @@ namespace Pale_BOT
                     {
                         user = cursor.FirstOrDefault();
                     }
+                    if (user is not null)
+                        _cache.Set<User>(userId, user, CacheSingleton.GetStandartCacheEntryOptions());
                 }
                 return user;
             }
@@ -625,7 +630,7 @@ namespace Pale_BOT
                 modalBuilder.WithCustomId(ModalIds.Creation.ToString());
                 modalBuilder.AddTextInput("Введите имя персонажа", "name", TextInputStyle.Short, maxLength: 64, minLength: 1, required: true);
                 modalBuilder.AddTextInput("Введите название коронного навыка", "crown", TextInputStyle.Short, "грубаясила", required: true);
-                TextInputBuilder txtInputSkillsBuilder = new() { CustomId = "skills", Label = "Распределите 8 очков навыков персонажа", Required = true, Placeholder = "Формат: [навык слитно на русском]:[значение] через пробел.\nНапример,\nэквалибристика:4 моторика:2", Style = TextInputStyle.Paragraph };
+                TextInputBuilder txtInputSkillsBuilder = new() { CustomId = "skills", Label = "Распределите 8 очков навыков персонажа", Required = true, Placeholder = "Формат: [навык слитно на русском]:[значение] через пробел.\nНапример,\nэквалибристика:4 техника:2", Style = TextInputStyle.Paragraph };
                 modalBuilder.AddTextInput(txtInputSkillsBuilder);
                 await command.RespondWithModalAsync(modalBuilder.Build());
             }
@@ -760,6 +765,8 @@ namespace Pale_BOT
                 foreach (var perksValue in perkValuePair)
                 {
                     int value = Convert.ToInt32(perksValue.Value);
+                    if (value < 0)
+                        throw new CreatingCharacterException("Числа не могут быть отрицательными");
                     count += value;
                     AddPointsToPerkByNameRus(perksValue.Key, new ISkill[] { person.SkillSet.Intellect, person.SkillSet.Psyche, person.SkillSet.Physique, person.SkillSet.Motorics }, value);
                 }
@@ -1372,6 +1379,138 @@ namespace Pale_BOT
                     x.Components = null;
                 });
             }
+        }
+
+        public class Give
+        {
+            public async Task GivePoints(SocketSlashCommand command)
+            {
+                try
+                {
+                    ArgumentNullException.ThrowIfNull(((SocketGuildUser)command.User).Roles.FirstOrDefault(x => x.Permissions.KickMembers), nameof(User));
+                    SocketGuildUser mentionedUser = (SocketGuildUser)command.Data.Options.First().Options.First(x => x.Value is SocketUser).Value;
+                    User? user = await new Shared().GetUserFromRepositoryAsync(mentionedUser.Id);
+                    ArgumentNullException.ThrowIfNull(user, "Упомянутый пользователь не имеет персонажей");
+                    var subcommandName = command.Data.Options.First().Name;
+                    string attribute = (subcommandName != "health" && subcommandName != "moral") ? (string)command.Data.Options.First().Options.First(x => x.Value is string).Value : subcommandName;
+                    Int64 value = (Int64)command.Data.Options.First().Options.First(x => x.Value is Int64).Value;
+                    if (user.Persons.Count > 1)
+                    {
+                        var selectMenuBuilder = new Shared().CreatePersonsSelectMenu(user.Persons, SelectMenuIds.GivePoints);
+                        string message = $"Выберите персонажа, характеристики которого вы хотите изменить. Атрибут: " + attribute+ $". Значение {value}. Пользователь: {mentionedUser.Mention}";
+                        await command.RespondAsync(message, ephemeral: true, components: new ComponentBuilder().WithSelectMenu(selectMenuBuilder).Build());
+                    }
+                    else if (user.Persons.Count == 1)
+                    {
+                        ChangeValueInPerson(user.Persons[0], (int)value, attribute);
+                        await new Shared().SaveToAllRepository(user);
+                        await command.RespondAsync("Изменение прошло успешно", ephemeral: true);
+                    }
+                    else
+                        throw new ArgumentNullException(nameof(user.Persons), "У пользователя нет персонажей");
+                }
+                catch (InvalidCastException invCastEx)
+                {
+                    Console.WriteLine(invCastEx.Message);
+                    await command.RespondAsync($"Произошла ошибка с приведением типов {invCastEx.Message}");
+                }
+                catch (ArgumentNullException nullEx) when (String.Equals(nullEx.ParamName, nameof(User)))
+                {
+                    Console.WriteLine(nullEx.Message);
+                    await command.RespondAsync($"Недостаточно прав для исполнения данной команды");
+                }
+                catch (ArgumentNullException nullEx)
+                {
+                    Console.WriteLine(nullEx.Message);
+                    await command.RespondAsync($"Ошибка некорректного аргумента: {nullEx.Message}");
+                }
+                catch (ArgumentException argEx)
+                {
+                    Console.WriteLine(argEx.Message);
+                    await command.RespondAsync($"Ошибка некорректного аргумента: {argEx.Message}");
+                }
+                catch (OverflowException overEx)
+                {
+                    Console.WriteLine(overEx.Message);
+                    await command.RespondAsync("Введеное число было слишком большим");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    await command.RespondAsync("Произошла непредвиденная ошибка");
+                }
+            }
+
+            public async Task GetPersonFromSelectMenu(SocketMessageComponent selectMenu)
+            {
+                try
+                {
+                    string message = selectMenu.Message.Content;
+                    string[] submessages = message.Split('.');
+                    string attribute = submessages[1].Substring(" Атрибут: ".Length);
+                    long value = Convert.ToInt64(submessages[2].Substring(". Значение ".Length));
+                    SocketGuildUser mentionedUser = (SocketGuildUser)selectMenu.Message.MentionedUsers.First();
+                    User? user = await new Shared().GetUserFromRepositoryAsync(mentionedUser.Id);
+                    ArgumentNullException.ThrowIfNull(user, nameof(user));
+                    int numPers = Convert.ToInt32(selectMenu.Data.Values.First());
+                    ChangeValueInPerson(user.Persons[numPers], (int)value, attribute);
+                    await new Shared().SaveToAllRepository(user);
+                    await selectMenu.ModifyOriginalResponseAsync(x => { x.Content = "Изменение прошло успешно"; x.Components = null; });
+                }
+                catch (ArgumentNullException nullEx)
+                {
+                    Console.WriteLine(nullEx.Message);
+                    await selectMenu.RespondAsync($"Пользователь не найден, либо ошибка на стороне сервера: {nullEx.Message}");
+                }
+                catch (OverflowException overEx)
+                {
+                    Console.WriteLine(overEx.Message);
+                    await selectMenu.RespondAsync($"Произошла ошибка переполнения: {overEx.Message}");
+                }
+                catch (InvalidCastException invCastEx)
+                {
+                    Console.WriteLine(invCastEx.Message);
+                    await selectMenu.RespondAsync($"Произошла ошибка приведения типов: {invCastEx.Message}");
+                }
+                catch (FormatException formEx)
+                {
+                    Console.WriteLine(formEx.Message);
+                    await selectMenu.RespondAsync($"Ошибка формата: {formEx.Message}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    await selectMenu.RespondAsync($"Произошла непредвиденная ошибка: {ex.Message}");
+                }
+
+            }
+
+            private void ChangeValueInPerson(Person person, int value, string attribute)
+            {
+                if (Regex.IsMatch(attribute, "health"))
+                {
+                    person.Health += value;
+                } else if (Regex.IsMatch(attribute, "moral"))
+                {
+                    person.Mental += value;
+                } else
+                {
+                    foreach (ISkill skill in new ISkill[] {person.SkillSet.Intellect, person.SkillSet.Psyche, person.SkillSet.Physique, person.SkillSet.Motorics})
+                    {
+                        foreach (Perk perk in skill.PerkList)
+                        {
+                            if (String.Equals(perk.GetTranslatedName(), attribute, StringComparison.OrdinalIgnoreCase))
+                            {
+                                perk.points += value;
+                                return;
+                            }
+                        }
+                    }
+                    throw new ArgumentException("Attribute was not founded");
+                }
+
+            }
+
         }
     }
 
