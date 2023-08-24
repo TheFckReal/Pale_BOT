@@ -385,6 +385,7 @@ namespace Pale_BOT
             {
                 _cache = CacheSingleton.GetInstance();
             }
+
             public async Task SendSelectMenuForSelectPersonAsync(SocketSlashCommand command, SocketGuildUser mentionedUser, SelectMenuIds selectMenuId)
             {
                 User? user = null;
@@ -489,6 +490,62 @@ namespace Pale_BOT
                 var userCollection = Program.BotDB.GetCollection<User>(Program.UserCollectionName);
                 await userCollection.ReplaceOneAsync(x => x.UserId == user.UserId, user, new ReplaceOptions { IsUpsert = true });
                 _cache.Set<User>(user.UserId, user, CacheSingleton.GetStandartCacheEntryOptions());
+            }
+
+            public static bool AreStringsClose(string str1, string str2)
+            {
+                bool result = false;
+                if ((str1.Length > str2.Length + str2.Length / 2) || (str2.Length > str1.Length + str1.Length / 2))
+                {
+                    return result;
+                }
+                const int equalDistance = 3;
+                if (FindDamerauLevenshteinDistance(str1, str2) <= equalDistance)
+                {
+                    result = true;
+                }
+                return result;
+            }
+
+            private static int FindDamerauLevenshteinDistance(string str1, string str2)
+            {
+                int n = str1.Length + 1;
+                int m = str2.Length + 1;
+                int[,] arrayDistance = new int[n, m];
+                for (int i = 0; i < n; i++)
+                    arrayDistance[i, 0] = i;
+                for (int j = 0; j < m; j++)
+                    arrayDistance[0, j] = j;
+                for (int i = 1; i < n; i++)
+                {
+                    for (int j = 1; j < m; j++)
+                    {
+                        int cost = str1[i - 1] == str2[j - 1] ? 0 : 1;
+                        arrayDistance[i, j] = MinOfThree(arrayDistance[i - 1, j] + 1, arrayDistance[i, j - 1] + 1, arrayDistance[i - 1, j - 1] + cost);
+                        if (i > 1 && j > 1 && str1[i - 1] == str2[j - 2] && str1[i - 2] == str2[j - 1])
+                        {
+                            arrayDistance[i, j] = Math.Min(arrayDistance[i, j], arrayDistance[i - 2, j - 2] + cost);
+                        }
+                    }
+                }
+                return arrayDistance[n - 1, m - 1];
+            }
+
+            private static int MinOfThree(int a, int b, int c)
+            {
+                if (a < b)
+                {
+                    if (a < c)
+                    {
+                        return a;
+                    }
+                    else return c;
+                }
+                else if (b < c)
+                {
+                    return b;
+                }
+                else return c;
             }
         }
 
@@ -785,7 +842,7 @@ namespace Pale_BOT
                 {
                     foreach (Skills.Perk perk in skill.PerkList)
                     {
-                        if (perkNameRus == perk.GetTranslatedName().ToLower().Replace(" ", ""))
+                        if (Shared.AreStringsClose(perkNameRus, perk.GetTranslatedName().ToLower().Replace(" ", "")))
                         {
                             isPerkFounded = true;
                             perk.points += value;
@@ -814,7 +871,7 @@ namespace Pale_BOT
                 {
                     foreach (Skills.Perk perk in skill.PerkList)
                     {
-                        if (perkNameRus == perk.GetTranslatedName().ToLower().Replace(" ", ""))
+                        if (Shared.AreStringsClose(perkNameRus, perk.GetTranslatedName().ToLower().Replace(" ", "")))
                         {
                             if (makeToCrowned)
                             {
@@ -1152,7 +1209,7 @@ namespace Pale_BOT
                         bool founded = false;
                         foreach (Skills.Perk perk in skill.PerkList)
                         {
-                            if (perkNameRus == perk.GetTranslatedName().ToLower().Replace(" ", ""))
+                            if (Shared.AreStringsClose(perkNameRus, perk.GetTranslatedName().ToLower().Replace(" ", "")))
                             {
                                 int newPoints = perk.points + value;
                                 if (newPoints > skill.MaxPoints)
@@ -1169,7 +1226,7 @@ namespace Pale_BOT
                 {
                     foreach (Skills.Perk perk in skill.PerkList)
                     {
-                        if (perkNameRus == perk.GetTranslatedName().ToLower().Replace(" ", ""))
+                        if (Shared.AreStringsClose(perkNameRus, perk.GetTranslatedName().ToLower().Replace(" ", "")))
                         {
                             isPerkFounded = true;
                             perk.points += value;
@@ -1397,7 +1454,7 @@ namespace Pale_BOT
                     if (user.Persons.Count > 1)
                     {
                         var selectMenuBuilder = new Shared().CreatePersonsSelectMenu(user.Persons, SelectMenuIds.GivePoints);
-                        string message = $"Выберите персонажа, характеристики которого вы хотите изменить. Атрибут: " + attribute+ $". Значение {value}. Пользователь: {mentionedUser.Mention}";
+                        string message = $"Выберите персонажа, характеристики которого вы хотите изменить. Атрибут: " + attribute + $". Значение {value}. Пользователь: {mentionedUser.Mention}";
                         await command.RespondAsync(message, ephemeral: true, components: new ComponentBuilder().WithSelectMenu(selectMenuBuilder).Build());
                     }
                     else if (user.Persons.Count == 1)
@@ -1448,14 +1505,14 @@ namespace Pale_BOT
                     string message = selectMenu.Message.Content;
                     string[] submessages = message.Split('.');
                     string attribute = submessages[1].Substring(" Атрибут: ".Length);
-                    long value = Convert.ToInt64(submessages[2].Substring(". Значение ".Length));
+                    long value = Convert.ToInt64(submessages[2].Substring(" Значение ".Length));
                     SocketGuildUser mentionedUser = (SocketGuildUser)selectMenu.Message.MentionedUsers.First();
                     User? user = await new Shared().GetUserFromRepositoryAsync(mentionedUser.Id);
                     ArgumentNullException.ThrowIfNull(user, nameof(user));
                     int numPers = Convert.ToInt32(selectMenu.Data.Values.First());
                     ChangeValueInPerson(user.Persons[numPers], (int)value, attribute);
                     await new Shared().SaveToAllRepository(user);
-                    await selectMenu.ModifyOriginalResponseAsync(x => { x.Content = "Изменение прошло успешно"; x.Components = null; });
+                    await selectMenu.RespondAsync("Изменение прошло успешно", ephemeral: true);
                 }
                 catch (ArgumentNullException nullEx)
                 {
@@ -1490,12 +1547,14 @@ namespace Pale_BOT
                 if (Regex.IsMatch(attribute, "health"))
                 {
                     person.Health += value;
-                } else if (Regex.IsMatch(attribute, "moral"))
+                }
+                else if (Regex.IsMatch(attribute, "moral"))
                 {
                     person.Mental += value;
-                } else
+                }
+                else
                 {
-                    foreach (ISkill skill in new ISkill[] {person.SkillSet.Intellect, person.SkillSet.Psyche, person.SkillSet.Physique, person.SkillSet.Motorics})
+                    foreach (ISkill skill in new ISkill[] { person.SkillSet.Intellect, person.SkillSet.Psyche, person.SkillSet.Physique, person.SkillSet.Motorics })
                     {
                         foreach (Perk perk in skill.PerkList)
                         {
