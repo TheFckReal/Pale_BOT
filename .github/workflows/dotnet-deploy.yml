@@ -35,8 +35,8 @@ jobs:
         uses: SamKirkland/FTP-Deploy-Action@v3.0.0-patch
         with:
           server: ${{secrets.SERVER_URL}}
-          username: "pale"
-          password: ${{secrets.USER_PASSWORD}}
+          ftp-username: "pale"
+          ftp-password: ${{secrets.USER_PASSWORD}}
           protocol: sftp
           port: 22
           dry-run: true
