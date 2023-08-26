@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore --output prg/
       - name: Upload
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
@@ -40,6 +40,7 @@ jobs:
           protocol: ftps
           port: 22
           dry-run: true
-          timeout: 120000
+          timeout: 60000
+          local-dir: ./prg/
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
