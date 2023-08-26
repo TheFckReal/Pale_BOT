@@ -15,6 +15,9 @@ jobs:
         dotnet-version: [ '6.0.x' ]
 
     steps:
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 2
       - uses: actions/checkout@v3
       - name: Setup .NET Core SDK ${{ matrix.dotnet-version }}
         uses: actions/setup-dotnet@v3
@@ -31,8 +34,6 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --configuration Release --no-restore #-property:PublishDir=${{env.DOTNET_ROOT}}/prg/
-      - name: Git init
-        run: git init
       - name: Upload
         uses: SamKirkland/FTP-Deploy-Action@v3.0.0-patch
         with:
