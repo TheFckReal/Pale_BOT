@@ -36,9 +36,8 @@ jobs:
         run: dotnet build --configuration Release --no-restore #-property:PublishDir=${{env.DOTNET_ROOT}}/prg/
       - name: Upload
         run: |
-          sftp pale@${{secrets.SERVER_URL}} 
-          ${{secrets.USER_PASSWORD}}
-          put -r ./
+          echo "put -r ./" > sftp_commands.txt
+          sftp -b sftp_commands.txt pale@${{secrets.SERVER_URL}}
         #- run: ${{secrets.USER_PASSWORD}}
         #- run: put -r ./
         #uses: SamKirkland/FTP-Deploy-Action@v3.0.0-patch
