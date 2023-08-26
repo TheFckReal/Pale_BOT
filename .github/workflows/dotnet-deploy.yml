@@ -32,12 +32,12 @@ jobs:
       - name: Build
         run: dotnet publish --configuration Release --no-restore -property:PublishDir=${{env.DOTNET_ROOT}}/prg/
       - name: Upload
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        uses: SamKirkland/FTP-Deploy-Action@v3.0.0-patch
         with:
           server: ${{secrets.SERVER_URL}}
           username: "pale"
           password: ${{secrets.USER_PASSWORD}}
-          protocol: ftps
+          protocol: sftp
           port: 22
           dry-run: true
           timeout: 60000
