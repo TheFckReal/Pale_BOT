@@ -39,5 +39,6 @@ jobs:
           password: ${{secrets.USER_PASSWORD}}
           protocol: ftps
           port: 22
+          dry-run: true
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
