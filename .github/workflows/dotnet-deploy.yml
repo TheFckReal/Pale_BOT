@@ -40,5 +40,6 @@ jobs:
           protocol: ftps
           port: 22
           dry-run: true
+          timeout: 60000
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
