@@ -5,8 +5,6 @@ on: [push]
 env:
   ConnectionStringMongoDB: ${{ secrets.CONNECTIONSTRINGMONGODB }}
   DiscordToken: ${{ secrets.DISCORDTOKEN }}
-  #Server: ${{secrets.SERVER_URL}}
-  #Password: ${{secrets.USER_PASSWORD}}
 
 jobs:
   build:
@@ -40,6 +38,7 @@ jobs:
           username: "pale"
           password: ${{secrets.USER_PASSWORD}}
           protocol: ftps
-          #local-dir: "/home/pale/"
+          port: 22
+          local-dir: "/home/pale/"
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
