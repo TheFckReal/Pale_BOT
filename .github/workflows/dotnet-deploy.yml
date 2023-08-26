@@ -34,9 +34,8 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --configuration Release --no-restore #-property:PublishDir=${{env.DOTNET_ROOT}}/prg/
-      #- name: Upload
-      - run: sftp pale@${{secrets.SERVER_URL}}
-      - run: ${{secrets.USER_PASSWORD}}
+      - name: Upload
+        run: sftp pale@${{secrets.SERVER_URL}} ${{secrets.USER_PASSWORD}}
       - run: put -r ./
         #- run: ${{secrets.USER_PASSWORD}}
         #- run: put -r ./
