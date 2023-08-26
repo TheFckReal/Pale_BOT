@@ -39,6 +39,6 @@ jobs:
           server: ${{secrets.SERVER_URL}}
           username: "pale"
           password: ${{secrets.USER_PASSWORD}}
-          local-dir: "/home/pale/"
+          #local-dir: "/home/pale/"
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
