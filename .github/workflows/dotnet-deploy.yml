@@ -30,14 +30,14 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build --configuration Release --no-restore -property:PublishDir=${{env.DOTNET_ROOT}}/prg/
+        run: dotnet build --configuration Release --no-restore #-property:PublishDir=${{env.DOTNET_ROOT}}/prg/
       - name: Upload
         uses: SamKirkland/FTP-Deploy-Action@v3.0.0-patch
         with:
           ftp-server: sftp://${{secrets.SERVER_URL}}
           ftp-username: "pale"
           ftp-password: ${{secrets.USER_PASSWORD}}
-          local-dir: ${{env.DOTNET_ROOT}}/prg/
+          #local-dir: ${{env.DOTNET_ROOT}}/prg/
           #protocol: sftp
           #port: 22
           #dry-run: true
