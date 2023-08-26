@@ -40,7 +40,7 @@ jobs:
           host: ${{secrets.SERVER_URL}}
           username: pale
           password: ${{ secrets.USER_PASSWORD }}
-          localDir: '.'
+          localDir: ${{env.DOTNET_ROOT}}
           remoteDir: '/'
       #- name: Upload
         #run: |
