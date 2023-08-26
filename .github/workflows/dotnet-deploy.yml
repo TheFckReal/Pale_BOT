@@ -39,6 +39,5 @@ jobs:
           password: ${{secrets.USER_PASSWORD}}
           protocol: ftps
           port: 22
-          local-dir: "/home/pale/"
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
