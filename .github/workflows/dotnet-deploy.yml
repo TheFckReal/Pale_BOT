@@ -37,7 +37,7 @@ jobs:
       - name: Upload
         run: |
           sftp pale@${{secrets.SERVER_URL}}
-          run: ${{secrets.USER_PASSWORD}}
+          ${{secrets.USER_PASSWORD}}
           put -r ./
         #- run: ${{secrets.USER_PASSWORD}}
         #- run: put -r ./
