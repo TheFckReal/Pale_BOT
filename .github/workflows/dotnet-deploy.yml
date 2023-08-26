@@ -6,6 +6,7 @@ env:
   ConnectionStringMongoDB: ${{ secrets.CONNECTIONSTRINGMONGODB }}
   DiscordToken: ${{ secrets.DISCORDTOKEN }}
   Server: ${{secrets.SERVER_URL}}
+  Password: ${{secrets.USER_PASSWORD}}
 
 jobs:
   build:
@@ -37,7 +38,7 @@ jobs:
         with:
           server: $env.Server
           username: "pale"
-          password: ${{secrets.USER_PASSWORD}}
+          password: $env.Password
           local-dir: "/home/pale"
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
