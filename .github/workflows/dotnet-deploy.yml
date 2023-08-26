@@ -41,6 +41,7 @@ jobs:
           username: pale
           password: ${{ secrets.USER_PASSWORD }}
           localDir: ${{env.DOTNET_ROOT}}
+          remoteDir: '/home/pale/file/'
       #- name: Upload
         #run: |
          # echo "put -r ./" > sftp_commands.txt
