@@ -32,7 +32,7 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
       - name: Upload
-        uses: SamKirkland/FTP-Deploy-Action@4.3.4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server-url: ${{ secrets.SERVER_URL }}
           username: pale
