@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build --configuration Release --no-restore --output prg/
+        run: dotnet publish --configuration Release --no-restore -property:PublishDir=${{env.DOTNET_ROOT}}/prg/
       - name: Upload
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
@@ -41,6 +41,6 @@ jobs:
           port: 22
           dry-run: true
           timeout: 60000
-          local-dir: ./prg/
+          local-dir: ${{env.DOTNET_ROOT}}/prg/
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
