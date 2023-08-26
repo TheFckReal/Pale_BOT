@@ -37,9 +37,9 @@ jobs:
           server: ${{secrets.SERVER_URL}}
           username: "pale"
           password: ${{secrets.USER_PASSWORD}}
-          protocol: sftp
+          protocol: ftps
           port: 22
           dry-run: true
-          timeout: 60000
+          timeout: 120000
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
