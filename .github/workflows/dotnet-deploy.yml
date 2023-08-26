@@ -35,7 +35,7 @@ jobs:
       - name: Upload
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: ${{env.Server}}
+          server: $env.Server
           username: "pale"
           password: ${{secrets.USER_PASSWORD}}
           local-dir: "/home/pale"
