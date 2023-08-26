@@ -31,6 +31,8 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --configuration Release --no-restore #-property:PublishDir=${{env.DOTNET_ROOT}}/prg/
+      - name: Git init
+        run: git init
       - name: Upload
         uses: SamKirkland/FTP-Deploy-Action@v3.0.0-patch
         with:
