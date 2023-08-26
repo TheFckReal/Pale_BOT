@@ -5,8 +5,8 @@ on: [push]
 env:
   ConnectionStringMongoDB: ${{ secrets.CONNECTIONSTRINGMONGODB }}
   DiscordToken: ${{ secrets.DISCORDTOKEN }}
-  Server: ${{secrets.SERVER_URL}}
-  Password: ${{secrets.USER_PASSWORD}}
+  #Server: ${{secrets.SERVER_URL}}
+  #Password: ${{secrets.USER_PASSWORD}}
 
 jobs:
   build:
@@ -36,9 +36,9 @@ jobs:
       - name: Upload
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: $env.Server
+          server: ${{secrets.SERVER_URL}}
           username: "pale"
-          password: $env.Password
-          #local-dir: "/home/pale/"
+          password: ${{secrets.USER_PASSWORD}}
+          local-dir: "/home/pale/"
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
