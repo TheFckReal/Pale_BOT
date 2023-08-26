@@ -31,5 +31,12 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --configuration Release --no-restore
+      - name: Upload
+        uses: SamKirkland/FTP-Deploy-Action@4.1.1
+        with:
+          server-url: ${{ secrets.SERVER_URL }}
+          username: pale
+          password-or-key-path: ${{ secrets.USER_PASSWORD }}
+          local-dir: "/home/pale"
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
