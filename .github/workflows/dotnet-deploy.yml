@@ -48,6 +48,6 @@ jobs:
           username: pale
           password: ${{ secrets.USER_PASSWORD }}
           port: 22
-          script: ./start.sh
+          script: sudo systemctl restart bot.service
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
