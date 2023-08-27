@@ -40,6 +40,6 @@ jobs:
           port: 22
           uploads: |
             ./Zone34_BOT/bin/Release/ => ./
-            ./Zone34_BOT/Configs/ => ./net6.0/
+            ./Zone34_BOT/Configs/ => ./net6.0/Configs/
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
