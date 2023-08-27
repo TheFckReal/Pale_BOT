@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using NLog;
+using System.Reflection;
 using System.Text.Json.Nodes;
 
 namespace Pale_BOT
@@ -22,6 +23,7 @@ namespace Pale_BOT
         public async Task MainAsync()
         {
             Console.WriteLine("App is starting...");
+            Console.WriteLine("Path: " + Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
             _client = new DiscordSocketClient(ClientConfigCreate());
             string? token = System.Environment.GetEnvironmentVariable("DiscordToken", System.OperatingSystem.IsLinux() ? EnvironmentVariableTarget.Process : EnvironmentVariableTarget.User);
             Configure();

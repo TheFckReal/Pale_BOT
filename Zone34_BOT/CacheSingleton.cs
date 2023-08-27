@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ namespace Pale_BOT
         private static MemoryCache? _cache;
         private static object _lock = new object();
 #if RELEASE
-        private static MemoryCacheOptions _memoryCacheOptions { get; } = JsonSerializer.Deserialize<MemoryCacheOptions>(File.ReadAllText("Configs\\cacheOptions.cfg")) ?? new MemoryCacheOptions();
+        private static MemoryCacheOptions _memoryCacheOptions { get; } = JsonSerializer.Deserialize<MemoryCacheOptions>(File.ReadAllText(Path.Combine("Configs", "cacheOptions.cfg"))) ?? new MemoryCacheOptions();
 #else
         private static MemoryCacheOptions _memoryCacheOptions { get; } = JsonSerializer.Deserialize<MemoryCacheOptions>(File.ReadAllText("..\\..\\..\\Configs\\cacheOptions.cfg")) ?? new MemoryCacheOptions();
 #endif
@@ -24,7 +25,7 @@ namespace Pale_BOT
             return new MemoryCacheEntryOptions().SetSize(1).SetSlidingExpiration(TimeSpan.FromMinutes(1));
         }
         public static MemoryCache GetInstance()
-        {
+        {   
             if (_cache == null)
             {
                 lock (_lock)

@@ -676,7 +676,7 @@ namespace Pale_BOT
                 catch (Exception ex)
                 {
                     await command.RespondAsync("Произошла непредвиденная ошибка");
-                    Console.WriteLine(ex.Message, ConsoleColor.Red);
+                    Console.WriteLine(ex.Message + " " + ex.InnerException, ConsoleColor.Red);
                 }
             }
 
@@ -906,7 +906,7 @@ namespace Pale_BOT
                 catch (Exception ex2)
                 {
                     await command.RespondAsync("Произошла непредвиденная ошибка при попытке увидеть персонажей игрока");
-                    Console.WriteLine(ex2.Message);
+                    Console.WriteLine(ex2.Message + " " + ex2.InnerException);
                 }
             }
 
