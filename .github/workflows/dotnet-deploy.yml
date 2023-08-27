@@ -39,7 +39,7 @@ jobs:
           password: ${{ secrets.USER_PASSWORD }}
           port: 22
           uploads: |
-            ./Zone34_BOT/bin/Release => ./
-            ./Zone34_BOT/Configs => ./net6.0
+            ./Zone34_BOT/bin/Release/ => ./
+            ./Zone34_BOT/Configs/ => ./net6.0/
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
