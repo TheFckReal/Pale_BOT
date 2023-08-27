@@ -32,7 +32,7 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore #-property:PublishDir=${{env.DOTNET_ROOT}}/prg/
       - name: SFTP uploader
-      - uses: Dylan700/sftp-upload-action@latest
+        uses: Dylan700/sftp-upload-action@latest
         with:
           server: ${{secrets.SERVER_URL}}
           username: pale
