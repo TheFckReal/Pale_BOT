@@ -47,7 +47,7 @@ jobs:
           host: ${{secrets.SERVER_URL}}
           username: pale
           password: ${{ secrets.USER_PASSWORD }}
-          port: 21
+          port: 22
           script: ./start.sh
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
