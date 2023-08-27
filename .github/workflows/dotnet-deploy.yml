@@ -48,6 +48,6 @@ jobs:
           username: pale
           password: ${{ secrets.USER_PASSWORD }}
           port: 22
-          script: echo "cum" >> cum.txt #./start.sh
+          script: ./start.sh
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
