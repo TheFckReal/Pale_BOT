@@ -31,16 +31,16 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --configuration Release --no-restore #-property:PublishDir=${{env.DOTNET_ROOT}}/prg/
-      - name: SFTP uploader
-        uses: Dylan700/sftp-upload-action@latest
-        with:
-          server: ${{secrets.SERVER_URL}}
-          username: pale
-          password: ${{ secrets.USER_PASSWORD }}
-          port: 22
-          uploads: |
-            ./Zone34_BOT/bin/Release/ => ./
-            ./Zone34_BOT/Configs/ => ./net6.0/Configs/
+     # - name: SFTP uploader
+     #   uses: Dylan700/sftp-upload-action@latest
+     #   with:
+     #     server: ${{secrets.SERVER_URL}}
+     #     username: pale
+     #     password: ${{ secrets.USER_PASSWORD }}
+     #     port: 22
+     #     uploads: |
+     #       ./Zone34_BOT/bin/Release/ => ./
+     #       ./Zone34_BOT/Configs/ => ./net6.0/Configs/
       - name: Bot start
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -48,6 +48,6 @@ jobs:
           username: pale
           password: ${{ secrets.USER_PASSWORD }}
           port: 22
-          script: ./start.sh
+          script: echo "cum" >> cum.txt #./start.sh
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
