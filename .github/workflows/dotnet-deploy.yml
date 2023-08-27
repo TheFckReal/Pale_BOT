@@ -41,5 +41,13 @@ jobs:
           uploads: |
             ./Zone34_BOT/bin/Release/ => ./
             ./Zone34_BOT/Configs/ => ./net6.0/Configs/
+      - name: Bot start
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{secrets.SERVER_URL}}
+          username: pale
+          password: ${{ secrets.USER_PASSWORD }}
+          port: 21
+          script: ./start.sh
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
