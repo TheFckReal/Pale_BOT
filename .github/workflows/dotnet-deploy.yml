@@ -39,29 +39,7 @@ jobs:
           password: ${{ secrets.USER_PASSWORD }}
           port: 22
           uploads: |
-            ./ => ./
-        #uses: wangyucode/sftp-upload-action@v2.0.2
-        #with:
-          #host: ${{secrets.SERVER_URL}}
-          #username: pale
-          #password: ${{ secrets.USER_PASSWORD }}
-          #localDir: ${{env.DOTNET_ROOT}}
-          #remoteDir: '/home/pale/file/'
-      #- name: Upload
-        #run: |
-         # echo "put -r ./" > sftp_commands.txt
-          #sftp -b sftp_commands.txt pale@${{secrets.SERVER_URL}}
-        #- run: ${{secrets.USER_PASSWORD}}
-        #- run: put -r ./
-        #uses: SamKirkland/FTP-Deploy-Action@v3.0.0-patch
-        #with:
-        #  ftp-server: sftp://${{secrets.SERVER_URL}}
-        # ftp-username: "pale"
-        #  ftp-password: ${{secrets.USER_PASSWORD}}
-          #local-dir: ${{env.DOTNET_ROOT}}/prg/
-          #protocol: sftp
-          #port: 22
-          #dry-run: true
-          #timeout: 60000
+            ./Zone34_BOT/bin/Release => ./
+            ./Zone34_BOT/Configs => ./net6.0
       #- name: Test
       #  run: dotnet test --no-restore --verbosity normal
