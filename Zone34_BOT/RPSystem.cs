@@ -804,7 +804,7 @@ namespace Pale_BOT
             private Dictionary<string, int> ComparePerksValues(string inputedString)
             {
                 Dictionary<string, int> perksValues = new Dictionary<string, int>();
-                inputedString = inputedString.ToLower();
+                inputedString = inputedString.ToLower().Replace("\n", "");
                 string[] inputedStringArray = inputedString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 foreach (string pair in inputedStringArray)
                 {
@@ -1162,7 +1162,7 @@ namespace Pale_BOT
             private Dictionary<string, int> ComparePerksValues(string inputedString)
             {
                 Dictionary<string, int> perksValues = new Dictionary<string, int>();
-                inputedString = inputedString.ToLower();
+                inputedString = inputedString.ToLower().Replace("\n", ""); ;
                 string[] inputedStringArray = inputedString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 foreach (string pair in inputedStringArray)
                 {
