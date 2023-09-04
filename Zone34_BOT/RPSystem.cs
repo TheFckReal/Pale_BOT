@@ -66,7 +66,7 @@ namespace Pale_BOT
                 public string Name { get; set; } = "";
                 public int Mental { get; set; }
                 public int Health { get; set; }
-                public int FreePoints { get; set; } = 8;
+                public int FreePoints { get; set; } = 18;
                 public Skills SkillSet { get; set; } = new Skills();
                 public class Skills
                 {
