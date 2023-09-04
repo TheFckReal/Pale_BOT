@@ -17,6 +17,10 @@ using System.ComponentModel;
 
 namespace Pale_BOT
 {
+    public static class RPGlobals
+    {
+        public const int StandartFreePoints = 18;
+    }
     enum PerksId : long
     {
         Intelligence = 1,
@@ -66,7 +70,7 @@ namespace Pale_BOT
                 public string Name { get; set; } = "";
                 public int Mental { get; set; }
                 public int Health { get; set; }
-                public int FreePoints { get; set; } = 18;
+                public int FreePoints { get; set; } = RPGlobals.StandartFreePoints;
                 public Skills SkillSet { get; set; } = new Skills();
                 public class Skills
                 {
@@ -687,7 +691,7 @@ namespace Pale_BOT
                 modalBuilder.WithCustomId(ModalIds.Creation.ToString());
                 modalBuilder.AddTextInput("Введите имя персонажа", "name", TextInputStyle.Short, maxLength: 64, minLength: 1, required: true);
                 modalBuilder.AddTextInput("Введите название коронного навыка", "crown", TextInputStyle.Short, "грубаясила", required: true);
-                TextInputBuilder txtInputSkillsBuilder = new() { CustomId = "skills", Label = "Распределите 8 очков навыков персонажа", Required = true, Placeholder = "Формат: [навык слитно на русском]:[значение] через пробел.\nНапример,\nэквалибристика:4 техника:2", Style = TextInputStyle.Paragraph };
+                TextInputBuilder txtInputSkillsBuilder = new() { CustomId = "skills", Label = $"Распределите {RPGlobals.StandartFreePoints} очков навыков персонажа", Required = true, Placeholder = "Формат: [навык слитно на русском]:[значение] через пробел.\nНапример,\nэквалибристика:4 техника:2", Style = TextInputStyle.Paragraph };
                 modalBuilder.AddTextInput(txtInputSkillsBuilder);
                 await command.RespondWithModalAsync(modalBuilder.Build());
             }
