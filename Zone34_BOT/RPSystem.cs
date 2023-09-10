@@ -679,7 +679,7 @@ namespace Pale_BOT
                 }
                 catch (Exception ex)
                 {
-                    await command.RespondAsync("Произошла непредвиденная ошибка");
+                    //await command.RespondAsync("Произошла непредвиденная ошибка");
                     Console.WriteLine(ex.Message + " " + ex.InnerException, ConsoleColor.Red);
                 }
             }
@@ -800,7 +800,7 @@ namespace Pale_BOT
                 }
                 catch (Exception ex)
                 {
-                    await socketModal.RespondAsync($"Произошла непредвиденная ошибка: {ex.Message}");
+                    //await socketModal.RespondAsync($"Произошла непредвиденная ошибка: {ex.Message}");
                     Console.WriteLine(ex.Message);
                 }
             }
@@ -904,12 +904,12 @@ namespace Pale_BOT
                 }
                 catch (Exception ex) when (ex is ArgumentNullException || ex is InvalidOperationException)
                 {
-                    await command.RespondAsync("Не было упомянуто ни одного пользователя");
+                    //await command.RespondAsync("Не было упомянуто ни одного пользователя");
                     Console.WriteLine(ex.Message);
                 }
                 catch (Exception ex2)
                 {
-                    await command.RespondAsync("Произошла непредвиденная ошибка при попытке увидеть персонажей игрока");
+                    //await command.RespondAsync("Произошла непредвиденная ошибка при попытке увидеть персонажей игрока");
                     Console.WriteLine(ex2.Message + " " + ex2.InnerException);
                 }
             }
@@ -1025,12 +1025,12 @@ namespace Pale_BOT
                 }
                 catch (Exception ex) when (ex is ArgumentNullException || ex is InvalidOperationException)
                 {
-                    await command.RespondAsync("Не было упомянуто ни одного пользователя");
+                    //await command.RespondAsync("Не было упомянуто ни одного пользователя");
                     Console.WriteLine(ex.Message);
                 }
                 catch (Exception ex2)
                 {
-                    await command.RespondAsync("Произошла непредвиденная ошибка при попытке увидеть персонажей игрока");
+                    //await command.RespondAsync("Произошла непредвиденная ошибка при попытке увидеть персонажей игрока");
                     Console.WriteLine(ex2.Message);
                 }
             }
@@ -1150,7 +1150,7 @@ namespace Pale_BOT
                 }
                 catch (Exception ex)
                 {
-                    await socketModal.RespondAsync("Произошла непредвиденная ошибка");
+                    //await socketModal.RespondAsync("Произошла непредвиденная ошибка");
                     Console.WriteLine(ex.Message);
                 }
             }
@@ -1294,7 +1294,7 @@ namespace Pale_BOT
                 }
                 catch (Exception e)
                 {
-                    await command.RespondAsync("Произошла непредвиденная ошибка");
+                    //await command.RespondAsync("Произошла непредвиденная ошибка");
                     Console.WriteLine(e.Message);
                 }
             }
@@ -1497,7 +1497,7 @@ namespace Pale_BOT
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
+                    //Console.WriteLine(e.Message);
                     await command.RespondAsync("Произошла непредвиденная ошибка");
                 }
             }
@@ -1540,7 +1540,7 @@ namespace Pale_BOT
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    //Console.WriteLine(ex.Message);
                     await selectMenu.RespondAsync($"Произошла непредвиденная ошибка: {ex.Message}");
                 }
 
